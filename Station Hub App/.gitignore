@@ -1,0 +1,7 @@
+node_modules/
+.expo/
+tsconfig.json
+serviceAccountKey.json
+.env
+__pycache__/
+*.pyc
