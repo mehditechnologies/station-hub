@@ -33,9 +33,9 @@ const LoginPage = () => {
       } else {
         setError(data.detail || "Invalid credentials");
       }
-    } catch {
-      setError("Cannot connect to server");
-    } finally {
+    } catch (err) {
+  setError(err.message || "Cannot connect to server");
+}finally {
       setLoading(false);
     }
   };

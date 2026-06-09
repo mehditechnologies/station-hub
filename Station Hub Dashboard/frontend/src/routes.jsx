@@ -20,20 +20,19 @@ function AppRoutes() {
       <Route path="/login" element={<Auth />} />
       <Route path="/signup" element={<Signup />} />
 
-      {/* Protected routes */}
+      {/* Protected layout wrapper */}
       <Route
-        path="/home"
+        path="/"
         element={
           <ProtectedRoute>
             <HomeLayout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/services" element={<Serv />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="services" element={<Serv />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
 
       {/* fallback */}

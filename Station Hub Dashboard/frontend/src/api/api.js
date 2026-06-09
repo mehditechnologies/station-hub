@@ -1,9 +1,11 @@
 const BASE_URL = import.meta.env.VITE_API_URL;
+console.log("API BASE URL:", import.meta.env.VITE_API_URL);
 
 const getToken = () => localStorage.getItem('token');
 
 const handleResponse = async (res) => {
-  const data = await res.json();
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : {};
   if (!res.ok) {
     throw new Error(data.detail || `Request failed: ${res.status}`);
   }
