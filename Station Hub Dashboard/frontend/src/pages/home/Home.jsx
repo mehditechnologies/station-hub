@@ -5,7 +5,7 @@ import MenuLogo from "../assets/menu1.png";
 import MoreLogo from "../assets/more.png";
 import DashLogo from "../assets/dashboard.png";
 import dropLogo from "../assets/waterdrop.png";
-import UserMenuModal from "../components/modals/menuModal";
+import UserMenuModal from "../../components/modals/menuModal";
 import ProfileLogo from '../assets/account.png'
 import SettingLogo from '../assets/settings.png'
 import NotifiLogo from '../assets/notification.png'

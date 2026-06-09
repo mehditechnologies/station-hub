@@ -1,71 +1,28 @@
-// import { Routes, Route, Navigate } from "react-router-dom";
-
-// import Auth from "./pages/LoginPage";
-// import HomeLayout from "./pages/Home";
-// import Dashboard from "./pages/DashBoard";
-// import Profile from "./pages/profile";
-// import Settings from "./pages/settings";
-// import Serv from "./pages/services";
-// import Signup from "./pages/SignupPage";
-
-// function AppRoutes() {
-//   return (
-//     <Routes>
-//       {/* Auth route (outside layout) */}
-//       <Route path="/login" element={<Auth />} />
-//       <Route path="/signup" element={<Signup />} />
-
-//       {/* Main layout routes */}
-//       <Route path="/" element={<HomeLayout />}>
-        
-//         {/* default route → dashboard */}
-//         <Route index element={<Navigate to="/dashboard" />} />
-
-//         <Route path="dashboard" element={<Dashboard />} />
-//         <Route path="services" element={<Serv />} />
-//         <Route path="profile" element={<Profile />} />
-//         <Route path="settings" element={<Settings />} />
-
-//       </Route>
-
-//       {/* fallback */}
-//       <Route path="*" element={<Navigate to="/dashboard" />} />
-//     </Routes>
-//   );
-// }
-
-// export default AppRoutes;
-
-
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import Auth from "./pages/LoginPage";
-import HomeLayout from "./pages/Home";
-import Dashboard from "./pages/DashBoard";
-import Profile from "./pages/profile";
-import Settings from "./pages/settings";
-import Serv from "./pages/services";
-import Signup from "./pages/SignupPage";
-
+import Auth from "./pages/auth/LoginPage";
+import HomeLayout from "./pages/home/Home";
+import Dashboard from "./pages/dashboard/Dashboard";
+import Profile from "./pages/profile/profile";
+import Settings from "./pages/settings/settings";
+import Serv from "./pages/services/services";
+import Signup from "./pages/auth/SignupPage";
+import LandingPage from "./pages/LandingPage/LandingPage";
 import ProtectedRoute from "./protectedRoutes";
 
 function AppRoutes() {
-
-const handleLogout = () => {
-  localStorage.removeItem("token");
-  navigate("/login");
-};
-
-
   return (
     <Routes>
+      {/* Landing page */}
+      <Route path="/" element={<LandingPage />} />
+
       {/* Auth routes */}
       <Route path="/login" element={<Auth />} />
       <Route path="/signup" element={<Signup />} />
 
       {/* Protected routes */}
       <Route
-        path="/"
+        path="/home"
         element={
           <ProtectedRoute>
             <HomeLayout />
@@ -73,15 +30,14 @@ const handleLogout = () => {
         }
       >
         <Route index element={<Navigate to="/dashboard" />} />
-
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="services" element={<Serv />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/services" element={<Serv />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
 
       {/* fallback */}
-      <Route path="*" element={<Navigate to="/dashboard" />} />
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 }
