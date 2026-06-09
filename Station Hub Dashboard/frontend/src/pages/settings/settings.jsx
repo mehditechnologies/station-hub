@@ -185,7 +185,7 @@ const Settings = () => {
     finally { setPaySaving(false) }
   }
 
-  // ── Theme tokens ───────────────────────────────────────
+  // ── Theme tokens ──────────────────────────────────────
   const D       = dark
   const bg      = D ? 'bg-[#0f1117]'                  : 'bg-gray-50'
   const card    = D ? 'bg-[#1a1d27] border-[#2a2d3e]' : 'bg-white border-gray-100'
