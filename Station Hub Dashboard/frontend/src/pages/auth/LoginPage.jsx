@@ -1,40 +1,45 @@
 import React, { useState } from "react";
-import Logo from "../assets/logo.png";
-import BGImage from "../assets/WebLandingPage2.png";
+import Logo from "../../assets/logo.png";
+import BGImage from "../../assets/WebLandingPage2.png";
 import { useNavigate } from "react-router-dom";
-// ─────────────────────────────────────────────
-//  REPLACE THESE with your actual asset paths
-// ─────────────────────────────────────────────
+import { api } from "../../api/api";
+ 
 const BG_IMAGE = BGImage;
 const LOGO_SRC = Logo;
-// ─────────────────────────────────────────────
-
+ 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  
-  const navigate = useNavigate();
-  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  
-  const validUser = {
-    email: "admin@gmail.com",
-    password: "123456",
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+ 
+  const navigate = useNavigate();
+ 
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api.auth.login(email, password);
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        navigate("/dashboard");
+      } else {
+        setError(data.detail || "Invalid credentials");
+      }
+    } catch {
+      setError("Cannot connect to server");
+    } finally {
+      setLoading(false);
+    }
   };
-  
-  const isLoggedIn = localStorage.getItem("token");
-const handleLogin = () => {
-  console.log("email:", email);
-console.log("password:", password);
-  if (email === validUser.email && password === validUser.password) {
-    localStorage.setItem("token", "logged-in");
-    navigate("/dashboard");
-  } else {
-    alert("Invalid credentials");
-  }
-};
-
+ 
   return (
     <div
       className="py-3 relative min-h-screen w-full flex items-center justify-center overflow-hidden"
@@ -46,21 +51,28 @@ console.log("password:", password);
     >
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/55" />
-
+ 
       {/* Card */}
       <div className="relative z-10 bg-white rounded-2xl shadow-2xl px-8 py-10 w-full max-w-sm flex flex-col items-center">
-
+ 
         {/* Logo + App Name */}
         <img
           src={LOGO_SRC}
           alt="Station Hub Logo"
           className="w-[130px] h-[130px] object-contain mb-0"
         />
-        
-        <p className="text-gray-500 text-sm mb-7 text-center">
+ 
+        <p className="text-gray-500 text-sm mb-4 text-center">
           Sign in to continue to your account
         </p>
-
+ 
+        {/* Error message */}
+        {error && (
+          <div className="w-full mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-500 text-sm text-center">{error}</p>
+          </div>
+        )}
+ 
         {/* Email */}
         <div className="w-full mb-4">
           <label className="block text-sm font-semibold text-gray-700 mb-1">
@@ -79,7 +91,7 @@ console.log("password:", password);
             />
           </div>
         </div>
-
+ 
         {/* Password */}
         <div className="w-full mb-4">
           <label className="block text-sm font-semibold text-gray-700 mb-1">
@@ -114,7 +126,7 @@ console.log("password:", password);
             </button>
           </div>
         </div>
-
+ 
         {/* Remember me + Forgot password */}
         <div className="w-full flex items-center justify-between mb-6">
           <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -130,29 +142,32 @@ console.log("password:", password);
             Forgot password?
           </a>
         </div>
-
+ 
         {/* Sign In Button */}
         <button
-        onClick={handleLogin}
-          className="hover:cursor-pointer w-full py-3 rounded-lg text-white font-bold text-base tracking-wide flex items-center justify-center gap-2 shadow-lg transition-all duration-200 hover:brightness-110 active:scale-95 mb-5"
+          onClick={handleLogin}
+          disabled={loading}
+          className="hover:cursor-pointer w-full py-3 rounded-lg text-white font-bold text-base tracking-wide flex items-center justify-center gap-2 shadow-lg transition-all duration-200 hover:brightness-110 active:scale-95 mb-5 disabled:opacity-70"
           style={{
             background: "linear-gradient(90deg, #f97316, #ea580c)",
             boxShadow: "0 4px 24px 0 rgba(249,115,22,0.4)",
           }}
         >
-          Sign In
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
+          {loading ? "Signing in..." : "Sign In"}
+          {!loading && (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          )}
         </button>
-
+ 
         {/* Divider */}
         <div className="w-full flex items-center gap-3 mb-5">
           <div className="flex-1 h-px bg-gray-200" />
           <span className="text-xs text-gray-400 font-medium">Or continue with</span>
           <div className="flex-1 h-px bg-gray-200" />
         </div>
-
+ 
         {/* Social Buttons */}
         <div className="w-full flex gap-3 mb-6">
           <button className="flex-1 flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
@@ -171,7 +186,7 @@ console.log("password:", password);
             GitHub
           </button>
         </div>
-
+ 
         {/* Sign up link */}
         <p className="text-sm text-gray-500">
           Don't have an account?{" "}
@@ -179,10 +194,9 @@ console.log("password:", password);
             Sign up for free
           </a>
         </p>
-
       </div>
     </div>
   );
 };
-
+ 
 export default LoginPage;

@@ -1,8 +1,8 @@
-import GroupLogo from "../assets/group.png";
-import InfinityLogo from "../assets/infinity.png";
-import StationLogo from "../assets/station.png";
-import AppointmentLogo from "../assets/appointment.png";
-import Money from "../assets/money2.png"
+import GroupLogo from "../../assets/group.png";
+import InfinityLogo from "../../assets/infinity.png";
+import StationLogo from "../../assets/station.png";
+import AppointmentLogo from "../../assets/appointment.png";
+import Money from "../../assets/money2.png";
 // import Money2 from "../assets/money2.png"
 
 import React from 'react'

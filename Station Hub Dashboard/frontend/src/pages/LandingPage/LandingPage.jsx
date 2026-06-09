@@ -1,11 +1,12 @@
+ 
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../../assets/logo.png";
 import BGImage from "../../assets/WebLandingPage2.png";
-
+ 
 const LandingPage = () => {
   const navigate = useNavigate();
-
+ 
   return (
     <div
       className="min-h-screen w-full flex flex-col relative overflow-hidden"
@@ -17,7 +18,7 @@ const LandingPage = () => {
     >
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/60" />
-
+ 
       {/* Navbar */}
       <nav className="relative z-10 flex items-center justify-between px-10 py-5">
         <div className="flex items-center gap-3">
@@ -39,23 +40,23 @@ const LandingPage = () => {
           </button>
         </div>
       </nav>
-
+ 
       {/* Hero */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-6 py-16">
         <div className="inline-flex items-center gap-2 bg-orange-500/20 border border-orange-500/40 rounded-full px-4 py-1.5 mb-6">
           <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
           <span className="text-orange-400 text-xs font-semibold tracking-wide uppercase">All Service Stations. One Hub.</span>
         </div>
-
+ 
         <h1 className="text-5xl md:text-6xl font-extrabold text-white leading-tight mb-6 max-w-3xl">
           Manage Your Station
           <span className="text-orange-500"> Smarter</span>
         </h1>
-
+ 
         <p className="text-gray-300 text-lg max-w-xl mb-10 leading-relaxed">
           Station Hub gives you full control over bookings, services, and customers — all from one powerful dashboard.
         </p>
-
+ 
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/signup")}
@@ -71,7 +72,7 @@ const LandingPage = () => {
           </button>
         </div>
       </div>
-
+ 
       {/* Features */}
       <div className="relative z-10 px-10 pb-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
@@ -91,15 +92,14 @@ const LandingPage = () => {
           ))}
         </div>
       </div>
-
+ 
       {/* Footer */}
       <div className="relative z-10 text-center pb-6">
-        <p className="text-gray-500 text-xs">
-          © 2024 Station Hub. All rights reserved.
-        </p>
+        <p className="text-gray-500 text-xs">© 2024 Station Hub. All rights reserved.</p>
       </div>
     </div>
   );
 };
-
+ 
 export default LandingPage;
+ 
