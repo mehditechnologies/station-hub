@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from config.firebase import db
 from datetime import datetime
 
@@ -54,6 +55,21 @@ async def get_dashboard_stats(user_id: str) -> dict:
         "confirmed_bookings": confirmed_bookings,
         "recent_bookings":    recent_bookings,
     }
+
+
+async def update_booking_status(booking_id: str, status: str) -> dict:
+    allowed = {"confirmed", "rejected", "completed", "cancelled"}
+    if status not in allowed:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {allowed}")
+
+    doc_ref = db.collection("bookings").document(booking_id)
+    doc = doc_ref.get()
+
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    doc_ref.update({"status": status})
+    return {"message": f"Booking marked as {status}", "booking_id": booking_id}
 
 
 def _fmt(b: dict) -> dict:
