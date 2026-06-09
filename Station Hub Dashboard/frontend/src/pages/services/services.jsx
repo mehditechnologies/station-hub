@@ -1,245 +1,502 @@
-import React from 'react'
-import { useState } from 'react';
-const services = () => {
+import React, { useState, useEffect, useCallback } from 'react'
+import { api } from '../../api/api'
 
-const [isAddingNew, setIsAddingNew] = useState(false);
+// ── SVG Icons ──────────────────────────────────────────────
+const IconPlus = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+  </svg>
+)
+const IconEdit = () => (
+  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+)
+const IconTrash = () => (
+  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+)
+const IconBarChart = () => (
+  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  </svg>
+)
+const IconX = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+)
+const IconStar = () => (
+  <svg className="w-3 h-3 fill-yellow-400 text-yellow-400" viewBox="0 0 24 24">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+)
+const IconClock = () => (
+  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+)
+const IconCar = () => (
+  <svg className="w-8 h-8 text-orange-300 opacity-40" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13 6H5l-2 6v3h14v-3l-2-6H9m4 0V4" />
+  </svg>
+)
+const IconRefresh = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+  </svg>
+)
+const IconImage = () => (
+  <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+)
 
-  return (
-    <div>
-      <main className="flex-1 p-6 overflow-auto rounded-lg bg-gray-50">
-
-  {/* Header */}
-  <div className="flex items-start justify-between mb-6">
-    <div>
-      <h1 className="text-xl font-semibold text-gray-900">My Services</h1>
-      <p className="text-sm text-gray-400 mt-0.5">Manage all your car care services</p>
+// ── Empty state ────────────────────────────────────────────
+const EmptyState = ({ onAdd }) => (
+  <div className="col-span-3 flex flex-col items-center justify-center py-20 text-center">
+    <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-4">
+      <svg className="w-8 h-8 text-orange-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+      </svg>
     </div>
-    <button onClick={() => setIsAddingNew(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-xl transition-colors shadow-sm">
-      <span className="text-base leading-none">+</span> Add New
+    <p className="text-sm font-semibold text-gray-700 mb-1">No services yet</p>
+    <p className="text-xs text-gray-400 mb-4">Add your first service to start receiving bookings</p>
+    <button
+      onClick={onAdd}
+      className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-xl transition-colors"
+    >
+      <IconPlus /> Add First Service
     </button>
   </div>
-{/* ///////////////////////////////////////////////////// */}
-{/* Add New Service Form - shown when isAddingNew is true */}
-{isAddingNew && (
-  <div className="bg-white border border-orange-200 rounded-2xl shadow-sm overflow-hidden mb-4">
-    
-    {/* Form Header */}
-    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-orange-50/50">
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center">
-          <span className="text-white text-sm">+</span>
-        </div>
-        <p className="text-sm font-semibold text-gray-900">Add New Service</p>
-      </div>
-      <button
-        onClick={() => setIsAddingNew(false)}
-        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-      >
-        ✕
-      </button>
-    </div>
+)
 
-    <div className="p-5">
-      <div className="grid grid-cols-3 gap-4">
+// ── Service Form (add or edit) ─────────────────────────────
+const EMPTY_FORM = { name: '', price: '', duration: '', description: '', status: 'Active', rating: '' }
 
-        {/* Service Name */}
-        <div className="col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Service Name</label>
-          <input
-            type="text"
-            placeholder="e.g. Premium Detail"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
-          />
-        </div>
+const ServiceForm = ({ initial = EMPTY_FORM, onSave, onCancel, saving, error, title }) => {
+  const [form, setForm] = useState(initial)
+  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
-        {/* Status */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Status</label>
-          <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all bg-white text-gray-700">
-            <option value="Active">🟢 Active</option>
-            <option value="Inactive">🟡 Inactive</option>
-          </select>
-        </div>
-
-        {/* Price */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Price (PKR)</label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">PKR</span>
-            <input
-              type="number"
-              placeholder="2,500"
-              className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
-            />
+  return (
+    <div className="bg-white border border-orange-200 rounded-2xl shadow-sm overflow-hidden mb-4">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-orange-50/40">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center">
+            <IconPlus />
           </div>
+          <p className="text-sm font-semibold text-gray-900">{title}</p>
         </div>
+        <button
+          onClick={onCancel}
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <IconX />
+        </button>
+      </div>
 
-        {/* Duration */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Duration</label>
-          <div className="relative">
+      <div className="p-5">
+        {error && (
+          <div className="mb-4 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-xs text-red-500">
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-3 gap-4">
+          {/* Name */}
+          <div className="col-span-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Service Name</label>
             <input
               type="text"
+              value={form.name}
+              onChange={e => set('name', e.target.value)}
+              placeholder="e.g. Premium Detail"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
+            />
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Status</label>
+            <select
+              value={form.status}
+              onChange={e => set('status', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all bg-white text-gray-700"
+            >
+              <option>Active</option>
+              <option>Inactive</option>
+            </select>
+          </div>
+
+          {/* Price */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Price (PKR)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">PKR</span>
+              <input
+                type="number"
+                value={form.price}
+                onChange={e => set('price', e.target.value)}
+                placeholder="2500"
+                className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Duration</label>
+            <input
+              type="text"
+              value={form.duration}
+              onChange={e => set('duration', e.target.value)}
               placeholder="e.g. 20–30 mins"
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
             />
           </div>
-        </div>
-
-        {/* Rating */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Rating (optional)</label>
-          <input
-            type="number"
-            step="0.1"
-            min="0"
-            max="5"
-            placeholder="4.9"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
-          />
-        </div>
-
-        {/* Description */}
-        <div className="col-span-3">
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Description</label>
-          <textarea
-            rows={3}
-            placeholder="Describe your service briefly..."
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all resize-none"
-          />
-        </div>
-
-        {/* Image Upload */}
-        <div className="col-span-3">
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Service Image</label>
-          <div className="border-2 border-dashed border-gray-200 hover:border-orange-300 rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors group">
-            <div className="w-9 h-9 bg-orange-50 group-hover:bg-orange-100 rounded-xl flex items-center justify-center transition-colors">
-              <span className="text-lg">📸</span>
-            </div>
-            <p className="text-xs text-gray-400 text-center">
-              Click to upload or drag & drop
-              <span className="block text-gray-300">PNG, JPG up to 5MB</span>
-            </p>
-            <input type="file" accept="image/*" className="hidden" />
-          </div>
-        </div>
-
-      </div>
-
-      {/* Form Actions */}
-      <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
-        <button
-          onClick={() => setIsAddingNew(false)}
-          className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors"
-        >
-          Cancel
-        </button>
-        <button className="px-5 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-colors shadow-sm">
-          Save Service
-        </button>
-      </div>
-    </div>
-
-  </div>
-)}
-{/* ///////////////////////////////////////////////////// */}
-
-
-  {/* Service Cards Grid */}
-  <div className="grid grid-cols-3 gap-4">
-    {[
-      {
-        name: "Premium Detail",
-        price: "PKR 2,500",
-        duration: "20–30 mins",
-        rating: "4.9",
-        reviews: 12,
-        description: "Professional interior and exterior cleaning with premium products.",
-        status: "Active",
-      },
-      {
-        name: "Express Wash",
-        price: "PKR 1,500",
-        duration: "15 mins",
-        rating: "4.8",
-        reviews: 25,
-        description: "Quick exterior wash with water spot treatment.",
-        status: "Active",
-      },
-      {
-        name: "Interior Detailing",
-        price: "PKR 3,500",
-        duration: "45 mins",
-        rating: "4.9",
-        reviews: 8,
-        description: "Deep cleaning of car interior with vacuum and conditioning.",
-        status: "Inactive",
-      },
-    ].map((service, i) => (
-      <div
-        key={i}
-        className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden flex flex-col"
-      >
-        {/* Image Placeholder */}
-        <div className="h-36 bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
-          <span className="text-4xl opacity-40">🚗</span>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 flex flex-col flex-1">
-          {/* Title + Status */}
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <p className="text-sm font-bold text-gray-900">{service.name}</p>
-            <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
-                service.status === "Active"
-                  ? "bg-green-50 text-green-600"
-                  : "bg-yellow-50 text-yellow-600"
-              }`}
-            >
-              {service.status === "Active" ? "🟢" : "🟡"} {service.status}
-            </span>
-          </div>
-
-          {/* Price + Duration */}
-          <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
-            <span className="font-semibold text-orange-500">{service.price}</span>
-            <span className="text-gray-300">|</span>
-            <span>⏱️ {service.duration}</span>
-          </div>
 
           {/* Rating */}
-          <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
-            <span className="text-yellow-400">⭐</span>
-            <span className="font-medium text-gray-700">{service.rating}</span>
-            <span className="text-gray-400">({service.reviews} reviews)</span>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Rating (optional)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="5"
+              value={form.rating}
+              onChange={e => set('rating', e.target.value)}
+              placeholder="4.9"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
+            />
           </div>
 
           {/* Description */}
-          <p className="text-xs text-gray-400 leading-relaxed mb-4 flex-1">
-            {service.description}
-          </p>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-            <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg transition-colors">
-              ✏️ Edit
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border border-red-100 hover:bg-red-50 text-red-500 text-xs font-medium rounded-lg transition-colors">
-              🗑️ Delete
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded-lg transition-colors">
-              📊 Stats
-            </button>
+          <div className="col-span-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Description</label>
+            <textarea
+              rows={3}
+              value={form.description}
+              onChange={e => set('description', e.target.value)}
+              placeholder="Describe your service briefly..."
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all resize-none"
+            />
           </div>
         </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave(form)}
+            disabled={saving}
+            className="px-5 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-colors shadow-sm disabled:opacity-60 flex items-center gap-1.5"
+          >
+            {saving
+              ? <><span className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> Saving…</>
+              : 'Save Service'
+            }
+          </button>
+        </div>
       </div>
-    ))}
-  </div>
-</main>
     </div>
   )
 }
 
-export default services
+// ── Main Component ─────────────────────────────────────────
+const Services = () => {
+  const [services,    setServices]    = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [error,       setError]       = useState('')
+  const [isAdding,    setIsAdding]    = useState(false)
+  const [editingId,   setEditingId]   = useState(null)
+  const [formError,   setFormError]   = useState('')
+  const [saving,      setSaving]      = useState(false)
+  const [deletingId,  setDeletingId]  = useState(null)
+  const [confirmDel,  setConfirmDel]  = useState(null) // service id pending confirm
+
+  // ── Fetch ──────────────────────────────────────────────
+  const fetchServices = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const data = await api.get('/services/')
+      setServices(data.services || [])
+    } catch (e) {
+      setError(e.message || 'Failed to load services')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchServices() }, [fetchServices])
+
+  // ── Validate ───────────────────────────────────────────
+  const validate = (form) => {
+    if (!form.name.trim())     return 'Service name is required'
+    if (!form.price)           return 'Price is required'
+    if (isNaN(Number(form.price)) || Number(form.price) < 0) return 'Enter a valid price'
+    if (!form.duration.trim()) return 'Duration is required'
+    return null
+  }
+
+  // ── Add ────────────────────────────────────────────────
+  const handleAdd = async (form) => {
+    const err = validate(form)
+    if (err) { setFormError(err); return }
+    setSaving(true); setFormError('')
+    try {
+      const data = await api.post('/services/', {
+        name:        form.name.trim(),
+        price:       Number(form.price),
+        duration:    form.duration.trim(),
+        description: form.description.trim(),
+        status:      form.status,
+        rating:      form.rating ? Number(form.rating) : null,
+      })
+      setServices(prev => [data.service, ...prev])
+      setIsAdding(false)
+    } catch (e) {
+      setFormError(e.message || 'Failed to add service')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Edit ───────────────────────────────────────────────
+  const handleEdit = async (form) => {
+    const err = validate(form)
+    if (err) { setFormError(err); return }
+    setSaving(true); setFormError('')
+    try {
+      const data = await api.put(`/services/${editingId}`, {
+        name:        form.name.trim(),
+        price:       Number(form.price),
+        duration:    form.duration.trim(),
+        description: form.description.trim(),
+        status:      form.status,
+        rating:      form.rating ? Number(form.rating) : null,
+      })
+      setServices(prev => prev.map(s => s.id === editingId ? { ...s, ...data.service } : s))
+      setEditingId(null)
+    } catch (e) {
+      setFormError(e.message || 'Failed to update service')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Delete ─────────────────────────────────────────────
+  const handleDelete = async (id) => {
+    setDeletingId(id)
+    try {
+      await api.delete(`/services/${id}`)
+      setServices(prev => prev.filter(s => s.id !== id))
+    } catch (e) {
+      alert(e.message || 'Failed to delete service')
+    } finally {
+      setDeletingId(null)
+      setConfirmDel(null)
+    }
+  }
+
+  // ── Loading skeleton ───────────────────────────────────
+  if (loading) return (
+    <div className="flex items-center justify-center h-full min-h-[300px] bg-gray-50 rounded-lg">
+      <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  return (
+    <div className="flex-1 p-6 overflow-auto rounded-lg bg-gray-50">
+
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">My Services</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {services.length} service{services.length !== 1 ? 's' : ''} · Manage what you offer
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchServices}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 bg-white hover:bg-gray-50 transition-colors"
+          >
+            <IconRefresh /> Refresh
+          </button>
+          <button
+            onClick={() => { setIsAdding(true); setEditingId(null); setFormError('') }}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+          >
+            <IconPlus /> Add New
+          </button>
+        </div>
+      </div>
+
+      {/* ── Global error ── */}
+      {error && (
+        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-500">
+          {error}
+        </div>
+      )}
+
+      {/* ── Add Form ── */}
+      {isAdding && (
+        <ServiceForm
+          title="Add New Service"
+          onSave={handleAdd}
+          onCancel={() => { setIsAdding(false); setFormError('') }}
+          saving={saving}
+          error={formError}
+        />
+      )}
+
+      {/* ── Edit Form ── */}
+      {editingId && (() => {
+        const svc = services.find(s => s.id === editingId)
+        if (!svc) return null
+        return (
+          <ServiceForm
+            title={`Edit — ${svc.name}`}
+            initial={{
+              name:        svc.name        || '',
+              price:       svc.price       || '',
+              duration:    svc.duration    || '',
+              description: svc.description || '',
+              status:      svc.status      || 'Active',
+              rating:      svc.rating      || '',
+            }}
+            onSave={handleEdit}
+            onCancel={() => { setEditingId(null); setFormError('') }}
+            saving={saving}
+            error={formError}
+          />
+        )
+      })()}
+
+      {/* ── Cards Grid ── */}
+      <div className="grid grid-cols-3 gap-4">
+
+        {services.length === 0 && !isAdding && (
+          <EmptyState onAdd={() => setIsAdding(true)} />
+        )}
+
+        {services.map(svc => (
+          <div
+            key={svc.id}
+            className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden flex flex-col"
+          >
+            {/* Image / placeholder */}
+            {svc.image_url
+              ? <img src={svc.image_url} alt={svc.name} className="h-36 w-full object-cover" />
+              : (
+                <div className="h-36 bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
+                  <IconCar />
+                </div>
+              )
+            }
+
+            {/* Content */}
+            <div className="p-4 flex flex-col flex-1">
+
+              {/* Title + Status */}
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <p className="text-sm font-bold text-gray-900 leading-tight">{svc.name}</p>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1 ${
+                  svc.status === 'Active'
+                    ? 'bg-green-50 text-green-600'
+                    : 'bg-yellow-50 text-yellow-600'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${svc.status === 'Active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                  {svc.status}
+                </span>
+              </div>
+
+              {/* Price + Duration */}
+              <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
+                <span className="font-semibold text-orange-500">
+                  PKR {Number(svc.price).toLocaleString()}
+                </span>
+                <span className="text-gray-200">|</span>
+                <span className="flex items-center gap-1 text-gray-400">
+                  <IconClock /> {svc.duration}
+                </span>
+              </div>
+
+              {/* Rating */}
+              {svc.rating && (
+                <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
+                  <IconStar />
+                  <span className="font-medium text-gray-700">{Number(svc.rating).toFixed(1)}</span>
+                </div>
+              )}
+
+              {/* Description */}
+              {svc.description && (
+                <p className="text-xs text-gray-400 leading-relaxed mb-3 flex-1 line-clamp-2">
+                  {svc.description}
+                </p>
+              )}
+
+              <div className="flex-1" />
+
+              {/* ── Delete confirm overlay ── */}
+              {confirmDel === svc.id ? (
+                <div className="mt-auto pt-3 border-t border-gray-100">
+                  <p className="text-xs text-red-500 font-medium mb-2 text-center">
+                    Delete "{svc.name}"? This can't be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setConfirmDel(null)}
+                      className="flex-1 px-2 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleDelete(svc.id)}
+                      disabled={deletingId === svc.id}
+                      className="flex-1 px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-60"
+                    >
+                      {deletingId === svc.id ? 'Deleting…' : 'Yes, Delete'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 pt-3 border-t border-gray-100 mt-auto">
+                  <button
+                    onClick={() => { setEditingId(svc.id); setIsAdding(false); setFormError('') }}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg transition-colors"
+                  >
+                    <IconEdit /> Edit
+                  </button>
+                  <button
+                    onClick={() => setConfirmDel(svc.id)}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border border-red-100 hover:bg-red-50 text-red-500 text-xs font-medium rounded-lg transition-colors"
+                  >
+                    <IconTrash /> Delete
+                  </button>
+                  <button
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded-lg transition-colors"
+                  >
+                    <IconBarChart /> Stats
+                  </button>
+                </div>
+              )}
+
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default Services
