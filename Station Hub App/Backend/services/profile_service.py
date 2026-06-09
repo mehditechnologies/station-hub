@@ -1,7 +1,5 @@
 from fastapi import HTTPException, status
-
 from config.firebase import db
-
 from schemas.profile_schemas import UpdateProfileRequest
 
 
@@ -15,11 +13,6 @@ async def get_profile(user_id: str) -> dict:
     user.pop("password", None)
 
     return {"user": {"id": user_id, **user}}
-
-
-
-
-
 
 
 async def update_profile(body: UpdateProfileRequest, user_id: str) -> dict:
@@ -38,15 +31,15 @@ async def update_profile(body: UpdateProfileRequest, user_id: str) -> dict:
     return {"message": "Profile updated successfully"}
 
 
-
 async def delete_account(user_id: str) -> dict:
     user_ref = db.collection("users").document(user_id)
 
     if not user_ref.get().exists:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
 
     user_ref.delete()
 
     return {"message": "Account deleted successfully"}
-
-

@@ -128,20 +128,20 @@ const LoginPage = () => {
         </div>
  
         {/* Remember me + Forgot password */}
-        <div className="w-full flex items-center justify-between mb-6">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={() => setRememberMe(!rememberMe)}
-              className="w-4 h-4 accent-orange-500 cursor-pointer"
-            />
-            <span className="text-sm text-gray-600">Remember me</span>
-          </label>
-          <a href="/forgot-password" className="text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors">
-            Forgot password?
-          </a>
-        </div>
+<div className="w-full flex items-center justify-between mb-6">
+  <label className="flex items-center gap-2 cursor-pointer select-none">
+    <input
+      type="checkbox"
+      checked={rememberMe}
+      onChange={() => setRememberMe(!rememberMe)}
+      className="w-4 h-4 accent-orange-500 cursor-pointer"
+    />
+    <span className="text-sm text-gray-600">Remember me</span>
+  </label>
+  <span className="text-xs text-gray-400 italic">
+    Use mobile app to reset password
+  </span>
+</div>
  
         {/* Sign In Button */}
         <button
