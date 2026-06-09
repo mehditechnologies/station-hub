@@ -119,12 +119,15 @@ const Profile = () => {
   useEffect(() => {
     ;(async () => {
       try {
-        const data = await api.get('/profile/me')
-        setFullName(data.full_name  || '')
-        setPhone(data.phone         || '')
-        setDob(data.dob             || '')
-        setAvatar(data.avatar_url   || null)
-        localStorage.setItem('user', JSON.stringify({ ...stored, ...data }))
+        // GET /profile/ — correct backend route
+        const data = await api.get('/profile/')
+        // backend returns { user: { id, full_name, phone, dob, email, ... } }
+        const user = data.user || data
+        setFullName(user.full_name  || '')
+        setPhone(user.phone         || '')
+        setDob(user.dob             || '')
+        setAvatar(user.avatar_url   || null)
+        localStorage.setItem('user', JSON.stringify({ ...stored, ...user }))
       } catch { /* use localStorage fallback */ }
       finally { setPageLoad(false) }
     })()
@@ -139,9 +142,10 @@ const Profile = () => {
     if (!fullName.trim()) { setProfileMsg('err:Full name is required'); return }
     setProfileSaving(true); setProfileMsg('')
     try {
-      await api.put('/profile/update', { full_name: fullName, phone, dob })
+      // PUT /profile/ — correct backend route
+      await api.put('/profile/', { full_name: fullName, phone, dob })
       localStorage.setItem('user', JSON.stringify({ ...stored, full_name: fullName, phone, dob }))
-      setProfileMsg('ok:Profile saved')
+      setProfileMsg('ok:Profile saved successfully')
     } catch (e) { setProfileMsg('err:' + (e.message || 'Save failed')) }
     finally { setProfileSaving(false) }
   }
@@ -194,8 +198,20 @@ const Profile = () => {
     if (newPass === oldPass)                 { setPassMsg('err:New password must differ'); return }
     setPassSaving(true); setPassMsg('')
     try {
-      await api.auth.changePassword(oldPass, newPass)
-      setPassMsg('ok:Password changed')
+      // POST /auth/change-password with auth token — fixed to send Bearer token
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ old_password: oldPass, new_password: newPass }),
+      })
+      const text = await res.text()
+      const data = text ? JSON.parse(text) : {}
+      if (!res.ok) throw new Error(data.detail || `Request failed: ${res.status}`)
+      setPassMsg('ok:Password changed successfully')
       setOldPass(''); setNewPass(''); setConfirmPass('')
     } catch (e) { setPassMsg('err:' + (e.message || 'Failed')) }
     finally { setPassSaving(false) }
@@ -210,7 +226,8 @@ const Profile = () => {
     if (!deleteConfirm) { setDeleteConfirm(true); return }
     setDeleting(true); setDeleteMsg('')
     try {
-      await api.delete('/profile/delete-account')
+      // DELETE /profile/ — correct backend route
+      await api.delete('/profile/')
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       navigate('/login')
