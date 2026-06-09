@@ -5,6 +5,7 @@ from routes import profile
 from routes import stations
 from routes import bookings
 from routes import settings
+from routes import dashboard
 
 app = FastAPI(
     title="Station Hub API",
@@ -25,6 +26,7 @@ app.include_router(profile.router)
 app.include_router(stations.router)
 app.include_router(bookings.router)
 app.include_router(settings.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/")
