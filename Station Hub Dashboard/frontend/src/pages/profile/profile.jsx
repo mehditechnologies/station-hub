@@ -55,16 +55,6 @@ const IconTrash = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
   </svg>
 )
-const IconSun = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/>
-  </svg>
-)
-const IconMoon = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-  </svg>
-)
 const IconCheck = () => (
   <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
@@ -85,26 +75,66 @@ const IconUpload = () => (
 const Msg = ({ msg }) => {
   if (!msg) return null
   const isOk = msg.startsWith('ok:')
-  const text = msg.slice(3)
   return (
     <p className={`text-xs font-medium mt-1 ${isOk ? 'text-green-500' : 'text-red-500'}`}>
-      {isOk ? '✓ ' : '✕ '}{text}
+      {isOk ? '✓ ' : '✕ '}{msg.slice(3)}
     </p>
   )
 }
+
+// ── Sub-components OUTSIDE Profile to prevent re-render focus loss ──
+const InputWrap = ({ label, icon, disabled, children, inpDis, inp, lbl, iconClr }) => (
+  <div>
+    <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>{label}</label>
+    <div className={`flex items-center gap-2 border rounded-xl px-3 h-10 transition-all ${disabled ? inpDis : inp}`}>
+      <span className={`flex-shrink-0 ${iconClr}`}>{icon}</span>
+      {children}
+    </div>
+  </div>
+)
+
+const PassField = ({ label, value, onChange, show, onToggle, inp, lbl, iconClr, inpTxt, dark: D }) => (
+  <InputWrap label={label} icon={<IconLock />} inp={inp} lbl={lbl} iconClr={iconClr}>
+    <input
+      type={show ? 'text' : 'password'}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder="••••••••"
+      className={`flex-1 bg-transparent outline-none text-sm placeholder-gray-500 ${inpTxt}`}
+    />
+    <button type="button" onClick={onToggle}
+      className={`flex-shrink-0 transition-colors ${D ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}>
+      {show ? <IconEyeOff /> : <IconEye />}
+    </button>
+  </InputWrap>
+)
+
+const SaveBtn = ({ onClick, loading: l, label = 'Save Changes' }) => (
+  <button onClick={onClick} disabled={l}
+    className="text-xs font-semibold bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2 rounded-xl transition-all shadow-sm disabled:opacity-60 cursor-pointer">
+    {l ? 'Saving…' : label}
+  </button>
+)
 
 // ── Main Component ────────────────────────────────────────
 const Profile = () => {
   const navigate = useNavigate()
   const fileRef  = useRef(null)
 
-  // ── Theme ──────────────────────────────────────────────
+  // ── Theme — read-only here, controlled from Settings ──
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
+
+  // Keep in sync if user toggled theme in Settings tab and comes back
   useEffect(() => {
-    const root = document.documentElement
-    if (dark) { root.classList.add('dark');    localStorage.setItem('theme', 'dark')  }
-    else       { root.classList.remove('dark'); localStorage.setItem('theme', 'light') }
-  }, [dark])
+    const sync = () => setDark(localStorage.getItem('theme') === 'dark')
+    window.addEventListener('storage', sync)
+    // also sync on focus (switching tabs)
+    window.addEventListener('focus', sync)
+    return () => {
+      window.removeEventListener('storage', sync)
+      window.removeEventListener('focus', sync)
+    }
+  }, [])
 
   // ── Fetch profile from DB ──────────────────────────────
   const stored  = JSON.parse(localStorage.getItem('user') || '{}')
@@ -119,14 +149,12 @@ const Profile = () => {
   useEffect(() => {
     ;(async () => {
       try {
-        // GET /profile/ — correct backend route
         const data = await api.get('/profile/')
-        // backend returns { user: { id, full_name, phone, dob, email, ... } }
         const user = data.user || data
         setFullName(user.full_name  || '')
         setPhone(user.phone         || '')
         setDob(user.dob             || '')
-        setAvatar(user.avatar_url   || null)
+        setAvatar(user.profile_image || user.avatar_url || null)
         localStorage.setItem('user', JSON.stringify({ ...stored, ...user }))
       } catch { /* use localStorage fallback */ }
       finally { setPageLoad(false) }
@@ -142,7 +170,6 @@ const Profile = () => {
     if (!fullName.trim()) { setProfileMsg('err:Full name is required'); return }
     setProfileSaving(true); setProfileMsg('')
     try {
-      // PUT /profile/ — correct backend route
       await api.put('/profile/', { full_name: fullName, phone, dob })
       localStorage.setItem('user', JSON.stringify({ ...stored, full_name: fullName, phone, dob }))
       setProfileMsg('ok:Profile saved successfully')
@@ -159,7 +186,6 @@ const Profile = () => {
     if (!file) return
     if (file.size > 5 * 1024 * 1024) { setAvatarMsg('err:Image must be under 5 MB'); return }
     setAvatarUploading(true); setAvatarMsg('')
-    // instant local preview
     const reader = new FileReader()
     reader.onload = ev => setAvatar(ev.target.result)
     reader.readAsDataURL(file)
@@ -198,7 +224,6 @@ const Profile = () => {
     if (newPass === oldPass)                 { setPassMsg('err:New password must differ'); return }
     setPassSaving(true); setPassMsg('')
     try {
-      // POST /auth/change-password with auth token — fixed to send Bearer token
       const token = localStorage.getItem('token')
       const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/change-password`, {
         method: 'POST',
@@ -226,7 +251,6 @@ const Profile = () => {
     if (!deleteConfirm) { setDeleteConfirm(true); return }
     setDeleting(true); setDeleteMsg('')
     try {
-      // DELETE /profile/ — correct backend route
       await api.delete('/profile/')
       localStorage.removeItem('token')
       localStorage.removeItem('user')
@@ -245,7 +269,7 @@ const Profile = () => {
   }
 
   // ── Theme tokens ───────────────────────────────────────
-  const D = dark
+  const D       = dark
   const bg      = D ? 'bg-[#0f1117]'                    : 'bg-gray-50'
   const card    = D ? 'bg-[#1a1d27] border-[#2a2d3e]'   : 'bg-white border-gray-100'
   const head    = D ? 'border-[#2a2d3e]'                 : 'border-gray-100'
@@ -260,39 +284,6 @@ const Profile = () => {
   const inpTxt  = D ? 'text-gray-100'                    : 'text-gray-700'
   const iconClr = D ? 'text-gray-500'                    : 'text-gray-400'
 
-  // ── Sub-components ─────────────────────────────────────
-  const InputWrap = ({ label, icon, disabled, children }) => (
-    <div>
-      <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>{label}</label>
-      <div className={`flex items-center gap-2 border rounded-xl px-3 h-10 transition-all ${disabled ? inpDis : inp}`}>
-        <span className={`flex-shrink-0 ${iconClr}`}>{icon}</span>
-        {children}
-      </div>
-    </div>
-  )
-
-  const PassField = ({ label, value, onChange, show, onToggle }) => (
-    <InputWrap label={label} icon={<IconLock />}>
-      <input
-        type={show ? 'text' : 'password'}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder="••••••••"
-        className={`flex-1 bg-transparent outline-none text-sm placeholder-gray-500 ${inpTxt}`}
-      />
-      <button type="button" onClick={onToggle} className={`flex-shrink-0 transition-colors ${D ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}>
-        {show ? <IconEyeOff /> : <IconEye />}
-      </button>
-    </InputWrap>
-  )
-
-  const SaveBtn = ({ onClick, loading: l, label = 'Save Changes' }) => (
-    <button onClick={onClick} disabled={l}
-      className="text-xs font-semibold bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2 rounded-xl transition-all shadow-sm disabled:opacity-60 cursor-pointer">
-      {l ? 'Saving…' : label}
-    </button>
-  )
-
   if (pageLoad) return (
     <div className={`flex items-center justify-center h-full min-h-[300px] ${bg}`}>
       <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
@@ -302,26 +293,15 @@ const Profile = () => {
   return (
     <div className={`p-6 min-h-full transition-colors duration-300 ${bg}`}>
 
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className={`text-xl font-semibold ${txt}`}>My Profile</h1>
-          <p className={`text-sm mt-0.5 ${sub}`}>Manage your personal account</p>
-        </div>
-        <button
-          onClick={() => setDark(!dark)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
-            D ? 'bg-[#1a1d27] border-[#2a2d3e] text-gray-300 hover:border-orange-500'
-              : 'bg-white border-gray-200 text-gray-600 hover:border-orange-400'
-          }`}
-        >
-          {D ? <><IconSun /><span>Light Mode</span></> : <><IconMoon /><span>Dark Mode</span></>}
-        </button>
+      {/* ── Header — no theme toggle here, use Settings ── */}
+      <div className="mb-6">
+        <h1 className={`text-xl font-semibold ${txt}`}>My Profile</h1>
+        <p className={`text-sm mt-0.5 ${sub}`}>Manage your personal account</p>
       </div>
 
       <div className="flex flex-col gap-5 max-w-4xl">
 
-        {/* ══ ROW 1: Profile Info Card (full width, 3-col inside) ══ */}
+        {/* ══ ROW 1: Profile Info Card ══ */}
         <div className={`border rounded-2xl shadow-sm overflow-hidden ${card}`}>
           <div className={`flex items-center gap-2.5 px-5 py-3.5 border-b ${head}`}>
             <span className="text-orange-500"><IconUser /></span>
@@ -386,7 +366,7 @@ const Profile = () => {
             <div className="lg:col-span-2 grid grid-cols-2 gap-4 content-start">
 
               <div className="col-span-2">
-                <InputWrap label="Full Name" icon={<IconUser />}>
+                <InputWrap label="Full Name" icon={<IconUser />} inp={inp} lbl={lbl} iconClr={iconClr}>
                   <input type="text" value={fullName} onChange={e => setFullName(e.target.value)}
                     placeholder="Your full name"
                     className={`flex-1 bg-transparent outline-none text-sm ${inpTxt}`} />
@@ -406,7 +386,7 @@ const Profile = () => {
               </div>
 
               <div>
-                <InputWrap label="Phone Number" icon={<IconPhone />}>
+                <InputWrap label="Phone Number" icon={<IconPhone />} inp={inp} lbl={lbl} iconClr={iconClr}>
                   <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
                     placeholder="+92-300-0000000"
                     className={`flex-1 bg-transparent outline-none text-sm ${inpTxt}`} />
@@ -414,7 +394,7 @@ const Profile = () => {
               </div>
 
               <div>
-                <InputWrap label="Date of Birth" icon={<IconCalendar />}>
+                <InputWrap label="Date of Birth" icon={<IconCalendar />} inp={inp} lbl={lbl} iconClr={iconClr}>
                   <input type="date" value={dob} onChange={e => setDob(e.target.value)}
                     className={`flex-1 bg-transparent outline-none text-sm ${inpTxt} ${D ? '[color-scheme:dark]' : ''}`} />
                 </InputWrap>
@@ -429,7 +409,7 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* ══ ROW 2: Change Password + Danger Zone side by side ══ */}
+        {/* ══ ROW 2: Change Password + Danger Zone ══ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Change Password */}
@@ -439,9 +419,9 @@ const Profile = () => {
               <p className={`text-sm font-semibold ${txt}`}>Change Password</p>
             </div>
             <div className="p-5 flex flex-col gap-3.5">
-              <PassField label="Current Password"     value={oldPass}     onChange={setOldPass}     show={showOld} onToggle={() => setShowOld(!showOld)} />
-              <PassField label="New Password"         value={newPass}     onChange={setNewPass}     show={showNew} onToggle={() => setShowNew(!showNew)} />
-              <PassField label="Confirm New Password" value={confirmPass} onChange={setConfirmPass} show={showCon} onToggle={() => setShowCon(!showCon)} />
+              <PassField label="Current Password"     value={oldPass}     onChange={setOldPass}     show={showOld} onToggle={() => setShowOld(!showOld)}     inp={inp} lbl={lbl} iconClr={iconClr} inpTxt={inpTxt} dark={D} />
+              <PassField label="New Password"         value={newPass}     onChange={setNewPass}     show={showNew} onToggle={() => setShowNew(!showNew)}     inp={inp} lbl={lbl} iconClr={iconClr} inpTxt={inpTxt} dark={D} />
+              <PassField label="Confirm New Password" value={confirmPass} onChange={setConfirmPass} show={showCon} onToggle={() => setShowCon(!showCon)}     inp={inp} lbl={lbl} iconClr={iconClr} inpTxt={inpTxt} dark={D} />
               <Msg msg={passMsg} />
               <div className={`flex justify-end pt-3 border-t ${head}`}>
                 <SaveBtn onClick={handlePasswordSave} loading={passSaving} label="Update Password" />

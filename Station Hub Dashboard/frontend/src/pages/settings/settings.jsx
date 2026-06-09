@@ -221,12 +221,25 @@ const Settings = () => {
     )
   }
 
-  // ── Add new category ───────────────────────────────────
+  // ── Add new category (uses raw fetch with token — same fix as change-password) ──
   const addCategory = async () => {
     if (!newCategory.trim()) return
     setCatSaving(true); setCatMsg('')
     try {
-      await api.post('/settings/categories', { name: newCategory.trim() })
+      const token = localStorage.getItem('token')
+      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const res = await fetch(`${BASE_URL}/settings/categories`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newCategory.trim() }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || 'Failed to add category')
+      }
       setCategories(prev => [...prev, newCategory.trim()])
       setNewCategory('')
       setCatMsg('ok:Category added')
@@ -473,13 +486,15 @@ const Settings = () => {
             {/* Sunday */}
             <div className="flex items-center gap-2">
               <span className={`text-xs w-24 flex-shrink-0 ${sub}`}>Sunday</span>
-              {sunOff
-                ? <span className={`text-xs px-3 py-1.5 rounded-lg ${D ? 'bg-[#2a2d3e] text-gray-400' : 'bg-gray-100 text-gray-400'}`}>OFF</span>
-                : <span className="text-xs text-green-500">Open</span>
-              }
-              <button onClick={() => setSunOff(!sunOff)}
-                className="text-xs text-orange-500 hover:text-orange-600 font-medium ml-2 cursor-pointer">
-                Toggle
+              <button
+                onClick={() => setSunOff(!sunOff)}
+                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                  sunOff
+                    ? D ? 'bg-[#2a2d3e] text-gray-400 hover:text-red-400' : 'bg-gray-100 text-gray-400 hover:text-red-500'
+                    : 'bg-green-500/10 text-green-500 hover:bg-red-50 hover:text-red-500'
+                }`}
+              >
+                {sunOff ? 'OFF — click to open' : 'Open — click to close'}
               </button>
             </div>
 
