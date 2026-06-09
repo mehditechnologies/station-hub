@@ -64,29 +64,26 @@ const IconComplete = () => (
   </svg>
 )
 
-// ── Helpers ────────────────────────────────────────────────
 const avatar = (name = '') => (name.charAt(0) || '?').toUpperCase()
 
 const Dashboard = () => {
-  const [stats,     setStats]     = useState(null)
-  const [pending,   setPending]   = useState([])
+  const [stats, setStats] = useState(null)
+  const [pending, setPending] = useState([])
   const [confirmed, setConfirmed] = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState('')
-  const [actioning, setActioning] = useState({}) // { [id]: true }
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [actioning, setActioning] = useState({})
+  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
 
-  // ── Read user name from localStorage ──────────────────
-  const user     = JSON.parse(localStorage.getItem('user') || '{}')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
   const userName = user.full_name?.split(' ')[0] || 'Admin'
 
-  // ── Fetch dashboard data ───────────────────────────────
   const fetchData = useCallback(async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     try {
       const data = await api.get('/dashboard/stats')
       setStats(data.stats)
-      setPending(data.pending_bookings   || [])
+      setPending(data.pending_bookings || [])
       setConfirmed(data.confirmed_bookings || [])
     } catch (e) {
       setError(e.message || 'Failed to load dashboard')
@@ -96,17 +93,22 @@ const Dashboard = () => {
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    const handleThemeChange = () => {
+      setDark(localStorage.getItem('theme') === 'dark')
+    }
+    window.addEventListener('storage', handleThemeChange)
+    return () => window.removeEventListener('storage', handleThemeChange)
+  }, [])
 
-  // ── Update booking status ──────────────────────────────
   const updateStatus = async (id, status) => {
     setActioning(prev => ({ ...prev, [id]: true }))
     try {
       await api.patch(`/dashboard/bookings/${id}/status`, { status })
-      // optimistic update
       if (status === 'confirmed') {
         const booking = pending.find(b => b.id === id)
         if (booking) {
-          setPending(prev  => prev.filter(b => b.id !== id))
+          setPending(prev => prev.filter(b => b.id !== id))
           setConfirmed(prev => [{ ...booking, status: 'confirmed' }, ...prev])
         }
       } else if (status === 'rejected') {
@@ -121,66 +123,75 @@ const Dashboard = () => {
     }
   }
 
-  // ── Stat cards config ──────────────────────────────────
   const statCards = [
-    { label: 'Total Stations', value: stats?.total_stations  ?? '—', icon: <IconStation />, color: 'bg-blue-50 text-blue-500'   },
-    { label: 'Total Users',    value: stats?.total_users     ?? '—', icon: <IconUsers />,   color: 'bg-purple-50 text-purple-500'},
-    { label: 'Total Bookings', value: stats?.total_bookings  ?? '—', icon: <IconBooking />, color: 'bg-orange-50 text-orange-500'},
-    { label: 'Services',       value: 'Unlimited',                   icon: <IconInfinity />,color: 'bg-green-50 text-green-500'  },
+    { label: 'Total Stations', value: stats?.total_stations ?? '—', icon: <IconStation />, color: 'blue' },
+    { label: 'Total Users', value: stats?.total_users ?? '—', icon: <IconUsers />, color: 'purple' },
+    { label: 'Total Bookings', value: stats?.total_bookings ?? '—', icon: <IconBooking />, color: 'orange' },
+    { label: 'Services', value: 'Unlimited', icon: <IconInfinity />, color: 'green' },
   ]
 
-  // ── Loading ────────────────────────────────────────────
+  // ── Theme tokens ───────────────────────────────────────
+  const D = dark
+  const bg = D ? 'bg-[#0f1117]' : 'bg-gray-50'
+  const txt = D ? 'text-gray-100' : 'text-gray-900'
+  const sub = D ? 'text-gray-400' : 'text-gray-500'
+  const card = D ? 'bg-[#1a1d27] border-[#2a2d3e]' : 'bg-white border-gray-200'
+  const head = D ? 'border-[#2a2d3e]' : 'border-gray-100'
+
+  const colorMap = {
+    blue: D ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-500',
+    purple: D ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-500',
+    orange: D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-50 text-orange-500',
+    green: D ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-500',
+  }
+
   if (loading) return (
-    <div className="flex items-center justify-center h-full min-h-[300px]">
+    <div className={`flex items-center justify-center h-full min-h-[300px] transition-colors duration-300 ${bg}`}>
       <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
   return (
-    <div className="flex-1 p-6 overflow-auto bg-gray-50 rounded-lg">
+    <div className={`flex-1 p-6 overflow-auto rounded-lg transition-colors duration-300 ${bg}`}>
 
-      {/* ── Header ── */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">
+          <h1 className={`text-xl font-semibold ${txt}`}>
             Welcome, {userName}! Good to have you onboard.
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className={`text-sm mt-1 ${sub}`}>
             Here's what's happening with your stations
           </p>
         </div>
         <button
           onClick={fetchData}
-          className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 bg-white hover:bg-gray-50 transition-colors"
+          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs transition-colors ${D ? 'bg-[#1a1d27] border-[#2a2d3e] text-gray-400 hover:text-gray-300' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
         >
           <IconRefresh /> Refresh
         </button>
       </div>
 
-      {/* ── Error ── */}
       {error && (
-        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-500">
+        <div className={`mb-4 px-4 py-3 border rounded-xl text-sm ${D ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-red-50 border-red-200 text-red-500'}`}>
           {error}
         </div>
       )}
 
-      {/* ── Stat Cards ── */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {statCards.map(card => (
-          <div key={card.label} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+          <div key={card.label} className={`border rounded-xl p-4 flex items-center justify-between transition-colors ${card}`}>
             <div>
-              <p className="text-xs text-gray-500 mb-1">{card.label}</p>
-              <p className="text-2xl font-semibold text-gray-900">{card.value}</p>
+              <p className={`text-xs mb-1 ${sub}`}>{card.label}</p>
+              <p className={`text-2xl font-semibold ${txt}`}>{card.value}</p>
             </div>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${card.color}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[card.color]}`}>
               {card.icon}
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Today's Earnings ── */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-400 rounded-2xl p-5 mb-6 flex items-center justify-between shadow-sm">
+      <div className={`rounded-2xl p-5 mb-6 bg-gradient-to-r from-orange-500 to-orange-400 flex items-center justify-between shadow-sm`}>
         <div>
           <p className="text-sm text-orange-100 mb-1">Today's Earnings</p>
           <p className="text-3xl font-bold text-white">
@@ -195,44 +206,43 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* ── Bookings Grid ── */}
       <div className="grid grid-cols-3 gap-4">
 
-        {/* Pending Bookings — col-span-2 */}
-        <div className="col-span-2 bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        {/* Pending Bookings */}
+        <div className={`col-span-2 border rounded-2xl shadow-sm overflow-hidden ${card}`}>
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${head}`}>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <p className="text-sm font-semibold text-gray-800">Pending Bookings</p>
-              <span className="text-xs bg-red-50 text-red-500 font-medium px-2 py-0.5 rounded-full">
+              <p className={`text-sm font-semibold ${txt}`}>Pending Bookings</p>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${D ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-500'}`}>
                 {pending.length}
               </span>
             </div>
           </div>
 
           {pending.length === 0 ? (
-            <div className="px-5 py-10 text-center text-sm text-gray-400">
+            <div className={`px-5 py-10 text-center text-sm ${sub}`}>
               No pending bookings
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className={`divide-y ${D ? 'divide-[#2a2d3e]' : 'divide-gray-50'}`}>
               {pending.map(b => (
                 <div key={b.id} className="px-5 py-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-sm font-semibold flex-shrink-0">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
                       {avatar(b.user_name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-gray-900">{b.user_name || 'Unknown'}</p>
+                        <p className={`text-sm font-semibold ${txt}`}>{b.user_name || 'Unknown'}</p>
                         <span className="text-sm font-bold text-orange-500">
                           PKR {b.price?.toLocaleString() || '0'}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className={`text-xs mt-0.5 ${sub}`}>
                         {b.from_location} → {b.to_location}
                       </p>
-                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                      <div className={`flex items-center gap-3 mt-1.5 text-xs ${sub}`}>
                         <span className="flex items-center gap-1"><IconCalendar /> {b.travel_date}</span>
                         <span className="flex items-center gap-1"><IconClock /> {b.travel_time}</span>
                         {b.car && <span className="flex items-center gap-1"><IconCar /> {b.car}</span>}
@@ -241,14 +251,14 @@ const Dashboard = () => {
                         <button
                           disabled={actioning[b.id]}
                           onClick={() => updateStatus(b.id, 'confirmed')}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-600 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${D ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400' : 'bg-green-50 hover:bg-green-100 text-green-600'}`}
                         >
                           <IconCheck /> Confirm
                         </button>
                         <button
                           disabled={actioning[b.id]}
                           onClick={() => updateStatus(b.id, 'rejected')}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                          className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${D ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400' : 'bg-red-50 hover:bg-red-100 text-red-500'}`}
                         >
                           <IconX /> Reject
                         </button>
@@ -262,33 +272,33 @@ const Dashboard = () => {
         </div>
 
         {/* Confirmed Bookings */}
-        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className={`border rounded-2xl shadow-sm overflow-hidden ${card}`}>
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${head}`}>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500" />
-              <p className="text-sm font-semibold text-gray-800">Confirmed</p>
-              <span className="text-xs bg-green-50 text-green-600 font-medium px-2 py-0.5 rounded-full">
+              <p className={`text-sm font-semibold ${txt}`}>Confirmed</p>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${D ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-600'}`}>
                 {confirmed.length}
               </span>
             </div>
           </div>
 
           {confirmed.length === 0 ? (
-            <div className="px-5 py-10 text-center text-sm text-gray-400">
+            <div className={`px-5 py-10 text-center text-sm ${sub}`}>
               No confirmed bookings
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className={`divide-y ${D ? 'divide-[#2a2d3e]' : 'divide-gray-50'}`}>
               {confirmed.map(b => (
                 <div key={b.id} className="px-5 py-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xs font-semibold flex-shrink-0">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
                       {avatar(b.user_name)}
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 truncate">{b.user_name || 'Unknown'}</p>
+                    <p className={`text-sm font-semibold truncate ${txt}`}>{b.user_name || 'Unknown'}</p>
                   </div>
-                  <p className="text-xs text-gray-500">{b.from_location} → {b.to_location}</p>
-                  <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                  <p className={`text-xs ${sub}`}>{b.from_location} → {b.to_location}</p>
+                  <div className={`flex items-center gap-1 text-xs mt-0.5 ${sub}`}>
                     <IconCalendar />{b.travel_date}
                     <span className="mx-1">·</span>
                     <IconClock />{b.travel_time}
