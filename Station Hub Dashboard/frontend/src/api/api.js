@@ -56,6 +56,18 @@ export const api = {
     return handleResponse(res);
   },
 
+  patch: async (endpoint, data) => {
+  const res = await fetch(`${BASE_URL}${endpoint}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+},
+
   // ── Auth endpoints ────────────────────────────────────────
   auth: {
     register: (full_name, email, password, phone = '') =>
