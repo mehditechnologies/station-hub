@@ -8,6 +8,8 @@ class ShopInfoRequest(BaseModel):
     email: Optional[str] = None
     category: Optional[str] = None
     description: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class AvailabilityRequest(BaseModel):
     mon_fri_open: Optional[str] = None
@@ -20,11 +22,8 @@ class AvailabilityRequest(BaseModel):
     slot_duration: Optional[str] = None
     max_bookings: Optional[int] = None
 
-class PaymentRequest(BaseModel):
-    account_holder: Optional[str] = None
-    bank_name: Optional[str] = None
-    account_number: Optional[str] = None
-    iban: Optional[str] = None
-
 class ThemeRequest(BaseModel):
-    theme: Optional[str] = None  # "light" or "dark"
+    theme: Optional[str] = None
+
+class CategoryRequest(BaseModel):
+    name: str
