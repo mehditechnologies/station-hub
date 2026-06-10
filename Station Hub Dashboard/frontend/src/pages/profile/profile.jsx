@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../api/api'
+import { useTheme } from '../../context/theme.Context'
 
 // ── SVG Icons ─────────────────────────────────────────────
 const IconUser = () => (
@@ -122,19 +123,20 @@ const Profile = () => {
   const fileRef  = useRef(null)
 
   // ── Theme — read-only here, controlled from Settings ──
-  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
+  // const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
 
   // Keep in sync if user toggled theme in Settings tab and comes back
-  useEffect(() => {
-    const sync = () => setDark(localStorage.getItem('theme') === 'dark')
-    window.addEventListener('storage', sync)
-    // also sync on focus (switching tabs)
-    window.addEventListener('focus', sync)
-    return () => {
-      window.removeEventListener('storage', sync)
-      window.removeEventListener('focus', sync)
-    }
-  }, [])
+  // useEffect(() => {
+  //   const sync = () => setDark(localStorage.getItem('theme') === 'dark')
+  //   window.addEventListener('storage', sync)
+  //   // also sync on focus (switching tabs)
+  //   window.addEventListener('focus', sync)
+  //   return () => {
+  //     window.removeEventListener('storage', sync)
+  //     window.removeEventListener('focus', sync)
+  //   }
+  // }, [])
+  const { dark } = useTheme()
 
   // ── Fetch profile from DB ──────────────────────────────
   const stored  = JSON.parse(localStorage.getItem('user') || '{}')

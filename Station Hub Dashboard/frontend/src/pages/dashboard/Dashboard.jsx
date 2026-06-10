@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { api } from '../../api/api'
+import { useTheme } from '../../context/theme.Context'
 
 // ── SVG Icons ──────────────────────────────────────────────
 const IconStation = () => (
@@ -73,7 +74,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [actioning, setActioning] = useState({})
-  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
+  // const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const userName = user.full_name?.split(' ')[0] || 'Admin'
@@ -93,13 +94,14 @@ const Dashboard = () => {
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
-  useEffect(() => {
-    const handleThemeChange = () => {
-      setDark(localStorage.getItem('theme') === 'dark')
-    }
-    window.addEventListener('storage', handleThemeChange)
-    return () => window.removeEventListener('storage', handleThemeChange)
-  }, [])
+  // useEffect(() => {
+  //   const handleThemeChange = () => {
+  //     setDark(localStorage.getItem('theme') === 'dark')
+  //   }
+  //   window.addEventListener('storage', handleThemeChange)
+  //   return () => window.removeEventListener('storage', handleThemeChange)
+  // }, [])
+  const { dark } = useTheme()
 
   const updateStatus = async (id, status) => {
     setActioning(prev => ({ ...prev, [id]: true }))

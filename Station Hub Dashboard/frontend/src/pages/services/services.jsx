@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { api } from "../../api/api";
+import { useTheme } from '../../context/theme.Context'
 
 // ── SVG Icons ──────────────────────────────────────────────
 const IconPlus = () => (
@@ -442,9 +443,9 @@ const Services = () => {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
-  const [dark, setDark] = useState(
-    () => localStorage.getItem("theme") === "dark",
-  );
+  // const [dark, setDark] = useState(
+  //   () => localStorage.getItem("theme") === "dark",
+  // );
 
   // ── Fetch services ────────────────────────────────────
   const fetchServices = useCallback(async () => {
@@ -463,13 +464,15 @@ const Services = () => {
   useEffect(() => {
     fetchServices();
   }, [fetchServices]);
-  useEffect(() => {
-    const handleThemeChange = () => {
-      setDark(localStorage.getItem("theme") === "dark");
-    };
-    window.addEventListener("storage", handleThemeChange);
-    return () => window.removeEventListener("storage", handleThemeChange);
-  }, []);
+
+  // useEffect(() => {
+  //   const handleThemeChange = () => {
+  //     setDark(localStorage.getItem("theme") === "dark");
+  //   };
+  //   window.addEventListener("storage", handleThemeChange);
+  //   return () => window.removeEventListener("storage", handleThemeChange);
+  // }, []);
+  const { dark } = useTheme()
 
   const validate = (form) => {
     if (!form.name.trim()) return "Service name is required";
