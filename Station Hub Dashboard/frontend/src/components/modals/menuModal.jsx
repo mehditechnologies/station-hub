@@ -21,12 +21,12 @@ export default function UserMenuModal({
 
   const navigate = useNavigate();
 
+  // ── Sign out ───────────────────────────────────────────
   const handleLogout = () => {
-    // optional: clear auth data
-    // localStorage.removeItem("token");
-
-    navigate("/login"); // or "/" if you want home page
-  };
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    navigate('/login')
+  }
 
   return (
     <AnimatePresence>

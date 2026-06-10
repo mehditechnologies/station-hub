@@ -8,11 +8,8 @@ from routes import settings
 from routes import dashboard
 from routes import services 
 
-app = FastAPI(
-    title="Station Hub API",
-    description="Backend API for Station Hub - Transport Booking App",
-    version="1.0.0",
-)
+app = FastAPI()
+
 
 app.add_middleware(
     CORSMiddleware,

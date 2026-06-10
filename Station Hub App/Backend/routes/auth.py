@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from middleware.auth_middleware import get_current_user
+from schemas.auth_schemas import GoogleLoginRequest  
 from schemas.auth_schemas import (
     RegisterRequest,
     LoginRequest,
@@ -11,6 +12,7 @@ from schemas.auth_schemas import (
 import services.auth_service as auth_service
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
 
 
 @router.post("/register")
@@ -41,3 +43,8 @@ async def reset_password(body: ResetPasswordRequest):
 @router.post("/change-password")
 async def change_password(body: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
     return await auth_service.change_password(body, current_user["sub"])
+
+
+@router.post("/google")
+async def google_login(body: GoogleLoginRequest):
+    return await auth_service.google_login(body.id_token)

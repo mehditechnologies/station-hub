@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
 from datetime import datetime, timedelta
+from firebase_admin import auth as firebase_auth
 
 from config.firebase import db
 from models.user_model import UserModel
@@ -155,3 +156,49 @@ async def change_password(body: ChangePasswordRequest, user_id: str) -> dict:
     })
 
     return {"message": "Password changed successfully"}
+
+# ─── google Auth ────────────────────────────────────────
+
+async def google_login(id_token: str) -> dict:
+    try:
+        decoded = firebase_auth.verify_id_token(id_token, clock_skew_seconds=10)
+    except Exception as e:
+        print("Google token error:", str(e))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+    email = decoded.get("email")
+    full_name = decoded.get("name", "")
+    profile_image = decoded.get("picture", "")
+
+    docs = db.collection("users").where("email", "==", email).limit(1).get()
+
+    if docs:
+        user_doc = docs[0]
+        user_id = user_doc.id
+        user = user_doc.to_dict()
+    else:
+        user = {
+            "full_name": full_name,
+            "email": email,
+            "password": "",
+            "phone": "",
+            "profile_image": profile_image,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        doc_ref = db.collection("users").add(user)
+        user_id = doc_ref[1].id
+
+    token = create_access_token({"sub": user_id, "email": email})
+
+    return {
+        "message": "Login successful",
+        "token": token,
+        "user": {
+            "id": user_id,
+            "full_name": full_name,
+            "email": email,
+            "phone": user.get("phone", ""),
+            "profile_image": profile_image,
+        },
+    }
+
