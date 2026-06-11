@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
-import Logo from "../../assets/Logo.png";
 import UserMenuModal from "../../components/modals/menuModal";
+import DarkLogo from "../../assets/darkMainLogo.png";
+import LightLogo from "../../assets/lightMainLogo.png";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { api } from '../../api/api'
 import { useTheme } from '../../context/theme.Context'
+
 
 
 // ── Dark mode hook ────────────────────────────────────────
@@ -212,10 +214,19 @@ export default function HomeLayout() {
 
           {/* Logo */}
           <div className="w-20 h-20 flex items-center mr-3 justify-center">
+            {dark ? 
             <img
-              src={Logo}
+              src={DarkLogo}
               className="w-20 h-20 object-contain cursor-pointer"
             />
+            :
+            <img
+              src={LightLogo}
+              className="w-20 h-20 object-contain cursor-pointer"
+            /> 
+             
+             }
+            
           </div>
         </div>
 
