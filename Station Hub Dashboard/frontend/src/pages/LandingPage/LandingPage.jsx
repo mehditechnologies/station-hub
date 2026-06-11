@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import Logo from "../../assets/logo.png";
+import Logo from "../../assets/darkMainLogo.png";
 import BGImage from "../../assets/WebLandingPage2.png";
 
 const IconCalendar = () => (

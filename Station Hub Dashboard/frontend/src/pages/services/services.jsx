@@ -1,6 +1,25 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { api } from "../../api/api";
-import { useTheme } from '../../context/theme.Context'
+import { useTheme } from "../../context/theme.Context";
+
+// ── cloudinary setUp ──────────────────────────────────────────────
+const CLOUDINARY_CLOUD_NAME = "dgq7ielys"; // ← replace
+const CLOUDINARY_UPLOAD_PRESET = "StationHub"; // ← replace
+
+async function uploadToCloudinary(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    { method: "POST", body: formData },
+  );
+
+  if (!res.ok) throw new Error("Image upload failed");
+  const data = await res.json();
+  return data.secure_url; // ← this is what you store in Firebase
+}
 
 // ── SVG Icons ──────────────────────────────────────────────
 const IconPlus = () => (
@@ -188,6 +207,8 @@ const ServiceForm = ({
   D,
 }) => {
   const [form, setForm] = useState(initial);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(initial.image_url || "");
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
   const lbl = D ? "text-gray-400" : "text-gray-600";
@@ -243,18 +264,19 @@ const ServiceForm = ({
               onClick={() =>
                 document.getElementById("service-image-input").click()
               }
-              
             >
-              {form.image_url ? (
+              {imagePreview ? (
                 <div className="relative w-full">
                   <img
-                    src={form.image_url}
+                    src={imagePreview}
                     alt="preview"
                     className="w-full h-32 object-cover rounded-lg"
                   />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      setImageFile(null);
+                      setImagePreview("");
                       set("image_url", "");
                     }}
                     className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs"
@@ -306,8 +328,10 @@ const ServiceForm = ({
                   alert("Image must be under 2MB");
                   return;
                 }
+                setImageFile(file);
                 const reader = new FileReader();
-                reader.onload = () => set("image_url", reader.result);
+                // reader.onload = () => set("image_url", reader.result);
+                reader.onload = () => setImagePreview(reader.result);
                 reader.readAsDataURL(file);
               }}
             />
@@ -413,7 +437,7 @@ const ServiceForm = ({
             Cancel
           </button>
           <button
-            onClick={() => onSave(form)}
+            onClick={() => onSave(form, imageFile)}
             disabled={saving}
             className="px-5 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-colors shadow-sm disabled:opacity-60 flex items-center gap-1.5"
           >
@@ -472,7 +496,7 @@ const Services = () => {
   //   window.addEventListener("storage", handleThemeChange);
   //   return () => window.removeEventListener("storage", handleThemeChange);
   // }, []);
-  const { dark } = useTheme()
+  const { dark } = useTheme();
 
   const validate = (form) => {
     if (!form.name.trim()) return "Service name is required";
@@ -483,15 +507,24 @@ const Services = () => {
     return null;
   };
 
-  const handleAdd = async (form) => {
+  const handleAdd = async (form, imageFile) => {
+    // ← accept imageFile
     const err = validate(form);
     if (err) {
       setFormError(err);
       return;
     }
+
     setSaving(true);
     setFormError("");
     try {
+      let imageUrl = form.image_url || "";
+
+      // Upload to Cloudinary if a new file was selected
+      if (imageFile) {
+        imageUrl = await uploadToCloudinary(imageFile); // ← upload & get URL
+      }
+
       const data = await api.post("/services/", {
         name: form.name.trim(),
         price: Number(form.price),
@@ -499,7 +532,9 @@ const Services = () => {
         description: form.description.trim(),
         status: form.status,
         rating: form.rating ? Number(form.rating) : null,
+        image_url: imageUrl, // ← now a real Cloudinary URL
       });
+
       setServices((prev) => [data.service, ...prev]);
       setIsAdding(false);
     } catch (e) {
@@ -509,15 +544,23 @@ const Services = () => {
     }
   };
 
-  const handleEdit = async (form) => {
+  const handleEdit = async (form, imageFile) => {
+    // ← accept imageFile
     const err = validate(form);
     if (err) {
       setFormError(err);
       return;
     }
+
     setSaving(true);
     setFormError("");
     try {
+      let imageUrl = form.image_url || "";
+
+      if (imageFile) {
+        imageUrl = await uploadToCloudinary(imageFile); // ← upload & get URL
+      }
+
       const data = await api.put(`/services/${editingId}`, {
         name: form.name.trim(),
         price: Number(form.price),
@@ -525,7 +568,9 @@ const Services = () => {
         description: form.description.trim(),
         status: form.status,
         rating: form.rating ? Number(form.rating) : null,
+        image_url: imageUrl, // ← Cloudinary URL
       });
+
       setServices((prev) =>
         prev.map((s) => (s.id === editingId ? { ...s, ...data.service } : s)),
       );
@@ -633,6 +678,7 @@ const Services = () => {
                 description: svc.description || "",
                 status: svc.status || "Active",
                 rating: svc.rating || "",
+                image_url: svc.image_url || "",
               }}
               onSave={handleEdit}
               onCancel={() => {

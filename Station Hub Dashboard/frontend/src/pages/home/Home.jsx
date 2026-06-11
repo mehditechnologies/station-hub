@@ -200,7 +200,7 @@ export default function HomeLayout() {
         className={`h-16 w-screen border-b flex items-center justify-between pr-6 z-10 transition-colors duration-300 ${navbar}`}
       >
         <div
-          className={`flex items-center w-52 border-b px-2 py-0 justify-between gap-4 ${dark ? "border-[#2a2d3e]" : "border-gray-100"}`}
+          className={`flex items-center w-52 px-2 py-0 justify-between gap-4 ${dark ? "border-[#2a2d3e]" : "border-gray-100"}`}
         >
           {/* Hamburger */}
           <div className="w-10 h-10 flex items-center justify-center">
@@ -213,7 +213,7 @@ export default function HomeLayout() {
           </div>
 
           {/* Logo */}
-          <div className="w-20 h-20 flex items-center mr-3 justify-center">
+          <div className="w-20 h-20 flex items-center mr-10 justify-center">
             {dark ? 
             <img
               src={DarkLogo}
