@@ -6,7 +6,8 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Profile from "./pages/profile/profile";
 import Settings from "./pages/settings/settings";
 import Notify from "./pages/notification/Notifications";
-import Serv from "./pages/services/services";
+import Serv from "./pages/services/Services";
+import Stat from "./pages/Stations/Station";
 import Signup from "./pages/auth/SignupPage";
 import LandingPage from "./pages/LandingPage/LandingPage";
 import ProtectedRoute from "./protectedRoutes";
@@ -31,6 +32,7 @@ function AppRoutes() {
         }
       >
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="stations" element={<Stat />} />
         <Route path="services" element={<Serv />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />

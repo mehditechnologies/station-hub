@@ -18,7 +18,7 @@ async function uploadToCloudinary(file) {
 
   if (!res.ok) throw new Error("Image upload failed");
   const data = await res.json();
-  return data.secure_url; // ← this is what you store in Firebase
+  return data.secure_url;
 }
 
 // ── SVG Icons ──────────────────────────────────────────────
@@ -195,6 +195,7 @@ const EMPTY_FORM = {
   status: "Active",
   rating: "",
   image_url: "",
+  station_ids: [], // ← new field
 };
 
 const ServiceForm = ({
@@ -205,6 +206,7 @@ const ServiceForm = ({
   error,
   title,
   D,
+  stations = [],
 }) => {
   const [form, setForm] = useState(initial);
   const [imageFile, setImageFile] = useState(null);
@@ -251,6 +253,7 @@ const ServiceForm = ({
         )}
 
         <div className="grid grid-cols-3 gap-4">
+          {/* Image upload */}
           <div className="col-span-3">
             <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
               Service Image (optional)
@@ -330,13 +333,13 @@ const ServiceForm = ({
                 }
                 setImageFile(file);
                 const reader = new FileReader();
-                // reader.onload = () => set("image_url", reader.result);
                 reader.onload = () => setImagePreview(reader.result);
                 reader.readAsDataURL(file);
               }}
             />
           </div>
 
+          {/* Service Name */}
           <div className="col-span-2">
             <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
               Service Name
@@ -350,6 +353,7 @@ const ServiceForm = ({
             />
           </div>
 
+          {/* Status */}
           <div>
             <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
               Status
@@ -364,6 +368,7 @@ const ServiceForm = ({
             </select>
           </div>
 
+          {/* Price */}
           <div>
             <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
               Price (PKR)
@@ -384,6 +389,7 @@ const ServiceForm = ({
             </div>
           </div>
 
+          {/* Duration */}
           <div>
             <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
               Duration
@@ -397,6 +403,7 @@ const ServiceForm = ({
             />
           </div>
 
+          {/* Rating */}
           <div>
             <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
               Rating (optional)
@@ -413,6 +420,57 @@ const ServiceForm = ({
             />
           </div>
 
+          {/* ── Station multi-select ── */}
+          <div className="col-span-3">
+            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
+              Stations{" "}
+              <span
+                className={`font-normal ${D ? "text-gray-600" : "text-gray-400"}`}
+              >
+                (optional)
+              </span>
+            </label>
+
+            {stations.length === 0 ? (
+              <p
+                className={`text-[11px] mt-1 ${D ? "text-gray-600" : "text-gray-400"}`}
+              >
+                No stations found. Add a station first.
+              </p>
+            ) : (
+              <div
+                className={`w-full px-3 py-2 text-sm border rounded-xl ${inp} space-y-1.5 max-h-40 overflow-y-auto`}
+              >
+                {stations.map((station) => (
+                  <label
+                    key={station.id}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      value={station.id}
+                      checked={form.station_ids?.includes(station.id)}
+                      onChange={(e) => {
+                        const current = form.station_ids || [];
+                        if (e.target.checked) {
+                          set("station_ids", [...current, station.id]);
+                        } else {
+                          set(
+                            "station_ids",
+                            current.filter((id) => id !== station.id),
+                          );
+                        }
+                      }}
+                      className="accent-blue-500"
+                    />
+                    <span>{station.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
           <div className="col-span-3">
             <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
               Description
@@ -459,6 +517,7 @@ const ServiceForm = ({
 // ── Main Component ─────────────────────────────────────────
 const Services = () => {
   const [services, setServices] = useState([]);
+  const [stations, setStations] = useState([]); // ← new
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isAdding, setIsAdding] = useState(false);
@@ -467,9 +526,19 @@ const Services = () => {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
-  // const [dark, setDark] = useState(
-  //   () => localStorage.getItem("theme") === "dark",
-  // );
+
+  const { dark } = useTheme();
+
+  // ── Fetch stations once ───────────────────────────────
+  useEffect(() => {
+    api
+      .get("/stations")
+      .then((data) => {
+        console.log("stations response:", data);
+        setStations(data.stations || []);
+      })
+      .catch(() => setStations([])); // fail silently — field is optional
+  }, []);
 
   // ── Fetch services ────────────────────────────────────
   const fetchServices = useCallback(async () => {
@@ -489,15 +558,6 @@ const Services = () => {
     fetchServices();
   }, [fetchServices]);
 
-  // useEffect(() => {
-  //   const handleThemeChange = () => {
-  //     setDark(localStorage.getItem("theme") === "dark");
-  //   };
-  //   window.addEventListener("storage", handleThemeChange);
-  //   return () => window.removeEventListener("storage", handleThemeChange);
-  // }, []);
-  const { dark } = useTheme();
-
   const validate = (form) => {
     if (!form.name.trim()) return "Service name is required";
     if (!form.price) return "Price is required";
@@ -507,8 +567,18 @@ const Services = () => {
     return null;
   };
 
+  const buildPayload = (form, imageUrl) => ({
+    name: form.name.trim(),
+    price: Number(form.price),
+    duration: form.duration.trim(),
+    description: form.description.trim(),
+    status: form.status,
+    rating: form.rating ? Number(form.rating) : null,
+    image_url: imageUrl,
+    station_ids: form.station_ids || [], // ← included in every save
+  });
+
   const handleAdd = async (form, imageFile) => {
-    // ← accept imageFile
     const err = validate(form);
     if (err) {
       setFormError(err);
@@ -519,22 +589,9 @@ const Services = () => {
     setFormError("");
     try {
       let imageUrl = form.image_url || "";
+      if (imageFile) imageUrl = await uploadToCloudinary(imageFile);
 
-      // Upload to Cloudinary if a new file was selected
-      if (imageFile) {
-        imageUrl = await uploadToCloudinary(imageFile); // ← upload & get URL
-      }
-
-      const data = await api.post("/services/", {
-        name: form.name.trim(),
-        price: Number(form.price),
-        duration: form.duration.trim(),
-        description: form.description.trim(),
-        status: form.status,
-        rating: form.rating ? Number(form.rating) : null,
-        image_url: imageUrl, // ← now a real Cloudinary URL
-      });
-
+      const data = await api.post("/services/", buildPayload(form, imageUrl));
       setServices((prev) => [data.service, ...prev]);
       setIsAdding(false);
     } catch (e) {
@@ -545,7 +602,6 @@ const Services = () => {
   };
 
   const handleEdit = async (form, imageFile) => {
-    // ← accept imageFile
     const err = validate(form);
     if (err) {
       setFormError(err);
@@ -556,21 +612,12 @@ const Services = () => {
     setFormError("");
     try {
       let imageUrl = form.image_url || "";
+      if (imageFile) imageUrl = await uploadToCloudinary(imageFile);
 
-      if (imageFile) {
-        imageUrl = await uploadToCloudinary(imageFile); // ← upload & get URL
-      }
-
-      const data = await api.put(`/services/${editingId}`, {
-        name: form.name.trim(),
-        price: Number(form.price),
-        duration: form.duration.trim(),
-        description: form.description.trim(),
-        status: form.status,
-        rating: form.rating ? Number(form.rating) : null,
-        image_url: imageUrl, // ← Cloudinary URL
-      });
-
+      const data = await api.put(
+        `/services/${editingId}`,
+        buildPayload(form, imageUrl),
+      );
       setServices((prev) =>
         prev.map((s) => (s.id === editingId ? { ...s, ...data.service } : s)),
       );
@@ -661,6 +708,7 @@ const Services = () => {
           saving={saving}
           error={formError}
           D={D}
+          stations={stations} // ← passed down
         />
       )}
 
@@ -679,6 +727,7 @@ const Services = () => {
                 status: svc.status || "Active",
                 rating: svc.rating || "",
                 image_url: svc.image_url || "",
+                station_ids: svc.station_ids || [], // ← pre-filled on edit
               }}
               onSave={handleEdit}
               onCancel={() => {
@@ -688,6 +737,7 @@ const Services = () => {
               saving={saving}
               error={formError}
               D={D}
+              stations={stations} // ← passed down
             />
           );
         })()}
@@ -697,138 +747,176 @@ const Services = () => {
           <EmptyState onAdd={() => setIsAdding(true)} D={D} />
         )}
 
-        {services.map((svc) => (
-          <div
-            key={svc.id}
-            className={`border rounded-2xl shadow-sm overflow-hidden flex flex-col transition-colors ${D ? "bg-[#1a1d27] border-[#2a2d3e]" : "bg-white border-gray-100"}`}
-          >
-            {svc.image_url ? (
-              <img
-                src={svc.image_url}
-                alt={svc.name}
-                className="h-36 w-full object-cover"
-              />
-            ) : (
-              <div
-                className={`h-36 flex items-center justify-center ${D ? "bg-orange-500/10" : "bg-gradient-to-br from-orange-50 to-orange-100"}`}
-              >
-                <IconCar />
-              </div>
-            )}
+        {services.map((svc) => {
+          // Resolve station name for display on the card
+          const stationNames = (svc.station_ids || [])
+            .map((id) => stations.find((st) => st.id === id)?.name)
+            .filter(Boolean);
 
-            <div className="p-4 flex flex-col flex-1">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <p
-                  className={`text-sm font-bold leading-tight ${D ? "text-gray-100" : "text-gray-900"}`}
-                >
-                  {svc.name}
-                </p>
-                <span
-                  className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1 ${
-                    svc.status === "Active"
-                      ? D
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-green-50 text-green-600"
-                      : D
-                        ? "bg-yellow-500/20 text-yellow-400"
-                        : "bg-yellow-50 text-yellow-600"
-                  }`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${svc.status === "Active" ? "bg-green-500" : "bg-yellow-500"}`}
-                  />
-                  {svc.status}
-                </span>
-              </div>
-
-              <div
-                className={`flex items-center gap-3 text-xs mb-2 ${D ? "text-gray-400" : "text-gray-500"}`}
-              >
-                <span className="font-semibold text-orange-500">
-                  PKR {Number(svc.price).toLocaleString()}
-                </span>
-                <span className={D ? "text-gray-600" : "text-gray-200"}>|</span>
-                <span className="flex items-center gap-1">
-                  <IconClock /> {svc.duration}
-                </span>
-              </div>
-
-              {svc.rating && (
-                <div
-                  className={`flex items-center gap-1 text-xs mb-3 ${D ? "text-gray-400" : "text-gray-500"}`}
-                >
-                  <IconStar />
-                  <span
-                    className={`font-medium ${D ? "text-gray-300" : "text-gray-700"}`}
-                  >
-                    {Number(svc.rating).toFixed(1)}
-                  </span>
-                </div>
-              )}
-
-              {svc.description && (
-                <p
-                  className={`text-xs leading-relaxed mb-3  flex-1  ${D ? "text-gray-500" : "text-gray-400"}`}
-                >
-                  {svc.description}
-                </p>
-              )}
-
-              <div className="flex-1" />
-
-              {confirmDel === svc.id ? (
-                <div
-                  className={`mt-auto pt-3 border-t ${D ? "border-[#2a2d3e]" : "border-gray-100"}`}
-                >
-                  <p
-                    className={`text-xs font-medium mb-2 text-center ${D ? "text-red-400" : "text-red-500"}`}
-                  >
-                    Delete "{svc.name}"? This can't be undone.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setConfirmDel(null)}
-                      className={`flex-1 px-2 py-1.5 border rounded-lg text-xs font-medium transition-colors ${D ? "border-[#2a2d3e] text-gray-500 hover:bg-[#2a2d3e]" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => handleDelete(svc.id)}
-                      disabled={deletingId === svc.id}
-                      className="flex-1 px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-60"
-                    >
-                      {deletingId === svc.id ? "Deleting…" : "Yes, Delete"}
-                    </button>
-                  </div>
-                </div>
+          return (
+            <div
+              key={svc.id}
+              className={`border rounded-2xl shadow-sm overflow-hidden flex flex-col transition-colors ${D ? "bg-[#1a1d27] border-[#2a2d3e]" : "bg-white border-gray-100"}`}
+            >
+              {svc.image_url ? (
+                <img
+                  src={svc.image_url}
+                  alt={svc.name}
+                  className="h-36 w-full object-cover"
+                />
               ) : (
                 <div
-                  className={`flex items-center gap-2 pt-3 border-t mt-auto ${D ? "border-[#2a2d3e]" : "border-gray-100"}`}
+                  className={`h-36 flex items-center justify-center ${D ? "bg-orange-500/10" : "bg-gradient-to-br from-orange-50 to-orange-100"}`}
                 >
-                  <button
-                    onClick={() => {
-                      setEditingId(svc.id);
-                      setIsAdding(false);
-                      setFormError("");
-                    }}
-                    className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border rounded-lg text-xs font-medium transition-colors ${D ? "border-[#2a2d3e] text-gray-400 hover:bg-[#2a2d3e]" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
-                  >
-                    <IconEdit /> Edit
-                  </button>
-                  <button
-                    onClick={() => setConfirmDel(svc.id)}
-                    className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border rounded-lg text-xs font-medium transition-colors ${D ? "border-red-500/50 text-red-400 hover:bg-red-500/10" : "border-red-100 text-red-500 hover:bg-red-50"}`}
-                  >
-                    <IconTrash /> Delete
-                  </button>
-                  <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded-lg transition-colors">
-                    <IconBarChart /> Stats
-                  </button>
+                  <IconCar />
                 </div>
               )}
+
+              <div className="p-4 flex flex-col flex-1">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <p
+                    className={`text-sm font-bold leading-tight ${D ? "text-gray-100" : "text-gray-900"}`}
+                  >
+                    {svc.name}
+                  </p>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1 ${
+                      svc.status === "Active"
+                        ? D
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-green-50 text-green-600"
+                        : D
+                          ? "bg-yellow-500/20 text-yellow-400"
+                          : "bg-yellow-50 text-yellow-600"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${svc.status === "Active" ? "bg-green-500" : "bg-yellow-500"}`}
+                    />
+                    {svc.status}
+                  </span>
+                </div>
+
+                <div
+                  className={`flex items-center gap-3 text-xs mb-2 ${D ? "text-gray-400" : "text-gray-500"}`}
+                >
+                  <span className="font-semibold text-orange-500">
+                    PKR {Number(svc.price).toLocaleString()}
+                  </span>
+                  <span className={D ? "text-gray-600" : "text-gray-200"}>
+                    |
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <IconClock /> {svc.duration}
+                  </span>
+                </div>
+
+                {svc.rating && (
+                  <div
+                    className={`flex items-center gap-1 text-xs mb-2 ${D ? "text-gray-400" : "text-gray-500"}`}
+                  >
+                    <IconStar />
+                    <span
+                      className={`font-medium ${D ? "text-gray-300" : "text-gray-700"}`}
+                    >
+                      {Number(svc.rating).toFixed(1)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Station badge on card */}
+                {stationNames.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                    <svg
+                      className="w-3 h-3 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    {stationNames.map((name, i) => (
+                      <span
+                        key={i}
+                        className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${D ? "bg-orange-500/15 text-orange-400" : "bg-orange-50 text-orange-600"}`}
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {svc.description && (
+                  <p
+                    className={`text-xs leading-relaxed mb-3 flex-1 ${D ? "text-gray-500" : "text-gray-400"}`}
+                  >
+                    {svc.description}
+                  </p>
+                )}
+
+                <div className="flex-1" />
+
+                {confirmDel === svc.id ? (
+                  <div
+                    className={`mt-auto pt-3 border-t ${D ? "border-[#2a2d3e]" : "border-gray-100"}`}
+                  >
+                    <p
+                      className={`text-xs font-medium mb-2 text-center ${D ? "text-red-400" : "text-red-500"}`}
+                    >
+                      Delete "{svc.name}"? This can't be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setConfirmDel(null)}
+                        className={`flex-1 px-2 py-1.5 border rounded-lg text-xs font-medium transition-colors ${D ? "border-[#2a2d3e] text-gray-500 hover:bg-[#2a2d3e]" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleDelete(svc.id)}
+                        disabled={deletingId === svc.id}
+                        className="flex-1 px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-60"
+                      >
+                        {deletingId === svc.id ? "Deleting…" : "Yes, Delete"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`flex items-center gap-2 pt-3 border-t mt-auto ${D ? "border-[#2a2d3e]" : "border-gray-100"}`}
+                  >
+                    <button
+                      onClick={() => {
+                        setEditingId(svc.id);
+                        setIsAdding(false);
+                        setFormError("");
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border rounded-lg text-xs font-medium transition-colors ${D ? "border-[#2a2d3e] text-gray-400 hover:bg-[#2a2d3e]" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                    >
+                      <IconEdit /> Edit
+                    </button>
+                    <button
+                      onClick={() => setConfirmDel(svc.id)}
+                      className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border rounded-lg text-xs font-medium transition-colors ${D ? "border-red-500/50 text-red-400 hover:bg-red-500/10" : "border-red-100 text-red-500 hover:bg-red-50"}`}
+                    >
+                      <IconTrash /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

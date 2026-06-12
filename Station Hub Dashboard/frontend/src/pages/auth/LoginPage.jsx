@@ -28,7 +28,13 @@ const LoginPage = () => {
       const data = await api.auth.googleLogin(id_token);
       if (data.token) {
         localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            ...data.user,
+            avatar_url: result.user.photoURL || data.user?.avatar_url || null, // ← add this
+          }),
+        );
         navigate("/dashboard");
       }
     } catch (err) {

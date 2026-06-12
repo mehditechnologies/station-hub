@@ -7,6 +7,37 @@ import { api } from "../../api/api";
 import { useTheme } from "../../context/theme.Context";
 import { useNotifications } from "../../context/NotificationContext";
 
+//////////////////////////////////////////////////////////////////////////////////
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../../firebase";
+
+// paste inside your component
+const addTestBooking = async () => {
+  try {
+    await addDoc(collection(db, "bookings"), {
+      car: "Economy Bus — MUL-LHR-02",
+      created_at: "2026-06-12T14:20:00.000000",
+      from_location: "Peshawar",
+      price: 800,
+      seat_count: 1,
+      service_id: "service_002",
+      station_id: "station_003",
+      status: "pending",
+      to_location: "Islamabad",
+      travel_date: "2026-09-15",
+      travel_time: "05:00 PM",
+      user_id: "user_004",
+      user_name: "Fatima Malik",
+      dashboardRead: false,
+    });
+    alert("Booking added!");
+  } catch (e) {
+    console.error(e);
+    alert("Failed: " + e.message);
+  }
+};
+////////////////////////////////////////////////////////////////////////////////////////
+
 // ── Dark mode hook ────────────────────────────────────────
 // function useDarkMode() {
 //   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -134,20 +165,35 @@ const IconMore = () => (
     />
   </svg>
 );
+const IconStation = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M8 7h8M8 12h8M8 17h4M5 3h14a2 2 0 012 2v16l-3-2-3 2-3-2-3 2-3-2V5a2 2 0 012-2z"
+    />
+  </svg>
+)
 
 const navItems = [
   { name: "Dashboard", path: "/dashboard", icon: <IconDashboard /> },
+  { name: "Stations", path: "/stations", icon: <IconStation /> },
   { name: "Services", path: "/services", icon: <IconServices /> },
   { name: "Profile", path: "/profile", icon: <IconProfile /> },
   { name: "Settings", path: "/settings", icon: <IconSettings /> },
-  // { name: "Settings", path: "/settings", icon: <IconSettings /> },
 ];
 
 export default function HomeLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   // const dark = useDarkMode();
-  const { unreadCount } = useNotifications()
+  const { unreadCount } = useNotifications();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -229,6 +275,13 @@ export default function HomeLayout() {
 
         {/* Right: notifications + avatar */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={addTestBooking}
+            type="button"
+            className=" bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-lg transition-all cursor-pointer"
+          >
+            + Add Test Booking
+          </button>
           <div
             onClick={() => navigate("/Notify")}
             className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${bellBg}`}

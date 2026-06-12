@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 
 class ServiceRequest(BaseModel):
@@ -10,3 +10,4 @@ class ServiceRequest(BaseModel):
     status: Optional[str] = "Active"
     rating: Optional[float] = None
     image_url: Optional[str] = None
+    station_ids: Optional[List[str]] = [] 
