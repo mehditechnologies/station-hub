@@ -57,8 +57,8 @@ const LandingPage = () => {
       {/* Navbar */}
       <nav className="relative z-10 flex items-center justify-between px-10 py-5">
         <div className="flex items-center gap-3">
-          <img src={Logo} alt="Station Hub" className="w-12 h-12 object-contain" />
-          <span className="text-white font-bold text-xl">Station Hub</span>
+          <img src={Logo} alt="Station Hub" className="w-20 h-20 ml-5 object-contain" />
+          {/* <span className="text-white font-bold text-xl">Station Hub</span> */}
         </div>
         <div className="flex items-center gap-3">
           <button
