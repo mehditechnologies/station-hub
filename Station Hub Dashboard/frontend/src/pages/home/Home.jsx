@@ -3,10 +3,9 @@ import UserMenuModal from "../../components/modals/menuModal";
 import DarkLogo from "../../assets/darkMainLogo.png";
 import LightLogo from "../../assets/lightMainLogo.png";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { api } from '../../api/api'
-import { useTheme } from '../../context/theme.Context'
-
-
+import { api } from "../../api/api";
+import { useTheme } from "../../context/theme.Context";
+import { useNotifications } from "../../context/NotificationContext";
 
 // ── Dark mode hook ────────────────────────────────────────
 // function useDarkMode() {
@@ -141,14 +140,15 @@ const navItems = [
   { name: "Services", path: "/services", icon: <IconServices /> },
   { name: "Profile", path: "/profile", icon: <IconProfile /> },
   { name: "Settings", path: "/settings", icon: <IconSettings /> },
+  // { name: "Settings", path: "/settings", icon: <IconSettings /> },
 ];
 
 export default function HomeLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   // const dark = useDarkMode();
-  
-  
+  const { unreadCount } = useNotifications()
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
@@ -163,8 +163,7 @@ export default function HomeLayout() {
   //     window.addEventListener('storage', handleThemeChange)
   //     return () => window.removeEventListener('storage', handleThemeChange)
   //   }, [])
-  const { dark } = useTheme()
-  
+  const { dark } = useTheme();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -214,28 +213,36 @@ export default function HomeLayout() {
 
           {/* Logo */}
           <div className="w-20 h-20 flex items-center mr-10 justify-center">
-            {dark ? 
-            <img
-              src={DarkLogo}
-              className="w-20 h-20 object-contain cursor-pointer"
-            />
-            :
-            <img
-              src={LightLogo}
-              className="w-20 h-20 object-contain cursor-pointer"
-            /> 
-             
-             }
-            
+            {dark ? (
+              <img
+                src={DarkLogo}
+                className="w-20 h-20 object-contain cursor-pointer"
+              />
+            ) : (
+              <img
+                src={LightLogo}
+                className="w-20 h-20 object-contain cursor-pointer"
+              />
+            )}
           </div>
         </div>
 
         {/* Right: notifications + avatar */}
         <div className="flex items-center gap-3">
           <div
-            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${bellBg}`}
+            onClick={() => navigate("/Notify")}
+            className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${bellBg}`}
           >
             <IconBell />
+            {unreadCount > 0 && (
+              <span
+                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white
+                           text-xs font-bold rounded-full min-w-[18px] h-[18px]
+                           flex items-center justify-center px-1 leading-none"
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </div>
           <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-semibold cursor-pointer">
             SJ

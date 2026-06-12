@@ -5,6 +5,7 @@ import HomeLayout from "./pages/home/Home";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Profile from "./pages/profile/profile";
 import Settings from "./pages/settings/settings";
+import Notify from "./pages/notification/Notifications";
 import Serv from "./pages/services/services";
 import Signup from "./pages/auth/SignupPage";
 import LandingPage from "./pages/LandingPage/LandingPage";
@@ -33,6 +34,7 @@ function AppRoutes() {
         <Route path="services" element={<Serv />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="Notify" element={<Notify />} />
       </Route>
 
       {/* fallback */}
