@@ -36,23 +36,6 @@ const addTestBooking = async () => {
     alert("Failed: " + e.message);
   }
 };
-////////////////////////////////////////////////////////////////////////////////////////
-
-// ── Dark mode hook ────────────────────────────────────────
-// function useDarkMode() {
-//   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
-//   useEffect(() => {
-//     const root = document.documentElement
-//     if (dark) root.classList.add('dark')
-//     else root.classList.remove('dark')
-//   }, [dark])
-//   useEffect(() => {
-//     const sync = () => setDark(localStorage.getItem('theme') === 'dark')
-//     window.addEventListener('themechange', sync)
-//     return () => window.removeEventListener('themechange', sync)
-//   }, [])
-//   return dark;
-// }
 
 // ── Inline SVG Icons ──────────────────────────────────────
 const IconMenu = () => (
@@ -179,7 +162,7 @@ const IconStation = () => (
       d="M8 7h8M8 12h8M8 17h4M5 3h14a2 2 0 012 2v16l-3-2-3 2-3-2-3 2-3-2V5a2 2 0 012-2z"
     />
   </svg>
-)
+);
 
 const navItems = [
   { name: "Dashboard", path: "/dashboard", icon: <IconDashboard /> },
@@ -199,16 +182,35 @@ export default function HomeLayout() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
 
-  // const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
-  // // const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
-  // useEffect(() => {
-  //     const handleThemeChange = () => {
-  //       setDark(localStorage.getItem('theme') === 'dark')
-  //     }
-  //     window.addEventListener('themechange', handleThemeChange)
-  //     window.addEventListener('storage', handleThemeChange)
-  //     return () => window.removeEventListener('storage', handleThemeChange)
-  //   }, [])
+  // 1. Declare state FIRST
+  const [stored, setStored] = useState(() =>
+    JSON.parse(localStorage.getItem("user") || "{}"),
+  );
+
+  // 2. Then derive from it
+  const sidebarName = stored.full_name || stored.email || "User";
+  const sidebarEmail = stored.email || "";
+  const sidebarAvatar = stored.avatar_url || null;
+
+  const sidebarInitials = sidebarName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  // 3. Then the useEffect
+  useEffect(() => {
+    const sync = () =>
+      setStored(JSON.parse(localStorage.getItem("user") || "{}"));
+    window.addEventListener("storage", sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, []);
+
   const { dark } = useTheme();
 
   const handleLogout = () => {
@@ -338,18 +340,27 @@ export default function HomeLayout() {
             <div
               className={`flex items-center gap-2 px-2 py-2 rounded-lg border ${userCard} ${!sidebarOpen ? "justify-center" : ""}`}
             >
-              <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                SJ
+              <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
+                {sidebarAvatar ? (
+                  <img
+                    src={sidebarAvatar}
+                    alt="avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-orange-500 flex items-center justify-center text-white text-xs font-semibold">
+                    {sidebarInitials}
+                  </div>
+                )}
               </div>
+
               {sidebarOpen && (
                 <div className="min-w-0 flex items-center justify-between gap-2 flex-1">
                   <div className="min-w-0">
                     <p className={`text-xs font-medium truncate ${txt}`}>
-                      Sadeed Javaid
+                      {sidebarName}
                     </p>
-                    <p className={`text-xs truncate ${sub}`}>
-                      sadeed@example.com
-                    </p>
+                    <p className={`text-xs truncate ${sub}`}>{sidebarEmail}</p>
                   </div>
                   <button
                     className={`transition-colors flex-shrink-0 ${dark ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600"}`}
