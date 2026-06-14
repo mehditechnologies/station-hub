@@ -324,7 +324,6 @@ const Settings = () => {
     () => localStorage.getItem("hideServicesToggle") === "true",
   );
   // Service Settings
-  const [servicesPaused, setServicesPaused] = useState(false);
   const [defaultVisibility, setDefaultVisibility] = useState(true);
 
   // Notifications
@@ -664,25 +663,7 @@ const Settings = () => {
             head={head}
           />
           <div className="p-5 flex flex-col gap-4">
-            {/* Pause all services */}
-            <div
-              className={`flex items-center justify-between gap-4 p-4 rounded-xl border ${D ? "bg-[#0f1117] border-[#2a2d3e]" : "bg-gray-50 border-gray-100"}`}
-            >
-              <div>
-                <p className={`text-sm font-medium ${txt}`}>
-                  Pause All Services
-                </p>
-                <p className={`text-xs mt-0.5 ${sub}`}>
-                  Temporarily hide all services from customers without deleting
-                  them
-                </p>
-              </div>
-              <Toggle
-                enabled={servicesPaused}
-                onToggle={setServicesPaused}
-                dark={D}
-              />
-            </div>
+          
 
             {/* Default service visibility */}
             <div
@@ -895,13 +876,13 @@ const Settings = () => {
                 </p>
               </div>
               <button
+                disabled={clearingServices}
                 onClick={() => {
                   if (!clearServicesConfirm) {
                     setClearServicesConfirm(true);
                     return;
                   }
-                  // TODO: wire up API call
-                  setClearServicesConfirm(false);
+                  handleClearServices();
                 }}
                 className={`text-xs font-semibold flex items-center gap-1.5 px-4 py-2 rounded-xl border transition-all flex-shrink-0 cursor-pointer ${
                   clearServicesConfirm
@@ -910,7 +891,13 @@ const Settings = () => {
                 }`}
               >
                 <IconTrash />
-                {clearServicesConfirm ? "Confirm" : "Clear"}
+                {clearingServices ? (
+                  <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin inline-block" />
+                ) : clearServicesConfirm ? (
+                  "Confirm"
+                ) : (
+                  "Clear"
+                )}
               </button>
             </div>
 
@@ -931,13 +918,13 @@ const Settings = () => {
                 </p>
               </div>
               <button
+                disabled={clearingStations}
                 onClick={() => {
                   if (!clearStationsConfirm) {
                     setClearStationsConfirm(true);
                     return;
                   }
-                  // TODO: wire up API call
-                  setClearStationsConfirm(false);
+                  handleClearStations();
                 }}
                 className={`text-xs font-semibold flex items-center gap-1.5 px-4 py-2 rounded-xl border transition-all flex-shrink-0 cursor-pointer ${
                   clearStationsConfirm
@@ -946,7 +933,13 @@ const Settings = () => {
                 }`}
               >
                 <IconTrash />
-                {clearStationsConfirm ? "Confirm" : "Clear"}
+                {clearingStations ? (
+                  <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin inline-block" />
+                ) : clearStationsConfirm ? (
+                  "Confirm"
+                ) : (
+                  "Clear"
+                )}
               </button>
             </div>
           </div>
