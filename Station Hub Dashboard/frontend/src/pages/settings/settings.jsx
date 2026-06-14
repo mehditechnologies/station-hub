@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../../api/api";
 import { useTheme } from "../../context/theme.Context";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { db } from "../../firebase";
 
 // ── SVG Icons ──────────────────────────────────────────────
 const IconShop = () => (
@@ -95,6 +97,71 @@ const IconSave = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+    />
+  </svg>
+);
+const IconPause = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
+  </svg>
+);
+const IconBell = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+    />
+  </svg>
+);
+const IconTrash = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+    />
+  </svg>
+);
+const IconEye = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
     />
   </svg>
 );
@@ -213,30 +280,33 @@ const DEFAULT_CATEGORIES = [
   "Truck & Heavy Vehicle",
 ];
 
+const Toggle = ({ enabled, onToggle, dark: D }) => (
+  <button
+    onClick={() => onToggle(!enabled)}
+    className={`relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0 ${
+      enabled ? "bg-orange-500" : D ? "bg-[#2a2d3e]" : "bg-gray-200"
+    }`}
+  >
+    <span
+      className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
+        enabled ? "translate-x-0.5" : "translate-x-[-16px]"
+      }`}
+    />
+  </button>
+);
+
 // ── Main Component ─────────────────────────────────────────
 const Settings = () => {
-  // ── Theme (controls entire app) ────────────────────────
-  // const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
-  // useEffect(() => {
-  //   const root = document.documentElement
-  //   if (dark) { root.classList.add('dark');    localStorage.setItem('theme', 'dark')  }
-  //   else       { root.classList.remove('dark'); localStorage.setItem('theme', 'light') }
-  // }, [dark])
   const { dark, toggleTheme } = useTheme();
-
-  // const handleThemeToggle = async (val) => {
-  //   setDark(val === 'dark')
-  //   window.dispatchEvent(new Event('themechange'))
-  //   try {
-  //     await api.put('/settings/theme', { theme: val })
-  //   } catch { /* silent — theme still works locally */ }
-  // }
   const handleThemeToggle = async (val) => {
     toggleTheme(val);
     try {
       await api.put("/settings/theme", { theme: val });
     } catch {}
   };
+
+  const [clearingServices, setClearingServices] = useState(false);
+  const [clearingStations, setClearingStations] = useState(false);
 
   // ── Page state ─────────────────────────────────────────
   const [loading, setLoading] = useState(true);
@@ -247,31 +317,53 @@ const Settings = () => {
   const [catMsg, setCatMsg] = useState("");
   const [catSaving, setCatSaving] = useState(false);
 
-  // Shop Info
-  const [shopName, setShopName] = useState("");
-  const [address, setAddress] = useState("");
-  const [shopPhone, setShopPhone] = useState("");
-  const [shopEmail, setShopEmail] = useState("");
-  const [category, setCategory] = useState(DEFAULT_CATEGORIES[0]);
-  const [description, setDescription] = useState("");
-  const [latitude, setLatitude] = useState(null);
-  const [longitude, setLongitude] = useState(null);
-  const [locMsg, setLocMsg] = useState("");
-  const [shopMsg, setShopMsg] = useState("");
-  const [shopSaving, setShopSaving] = useState(false);
+  const [togglingServiceId, setTogglingServiceId] = useState(null);
+  const [services, setServices] = useState([]);
+  const [hiddenServices, setHiddenServices] = useState([]);
+  const [showVisibilityDropdown, setShowVisibilityDropdown] = useState(
+    () => localStorage.getItem("hideServicesToggle") === "true",
+  );
+  // Service Settings
+  const [servicesPaused, setServicesPaused] = useState(false);
+  const [defaultVisibility, setDefaultVisibility] = useState(true);
 
-  // Availability
-  const [monFriOpen, setMonFriOpen] = useState("09:00");
-  const [monFriClose, setMonFriClose] = useState("18:00");
-  const [satOpen, setSatOpen] = useState("10:00");
-  const [satClose, setSatClose] = useState("17:00");
-  const [sunOff, setSunOff] = useState(true);
-  const [breakStart, setBreakStart] = useState("13:00");
-  const [breakEnd, setBreakEnd] = useState("14:00");
-  const [slotDuration, setSlotDuration] = useState("30 mins");
-  const [maxBookings, setMaxBookings] = useState(10);
-  const [availMsg, setAvailMsg] = useState("");
-  const [availSaving, setAvailSaving] = useState(false);
+  // Notifications
+  const [notifyNewBooking, setNotifyNewBooking] = useState(true);
+
+  // Danger Zone
+  const [clearServicesConfirm, setClearServicesConfirm] = useState(false);
+  const [clearStationsConfirm, setClearStationsConfirm] = useState(false);
+
+  /////////////////////////// HANDLE DEL SERVICES AND STATIOS///////////////////////
+  const handleClearServices = async () => {
+    setClearingServices(true);
+    try {
+      await Promise.all(services.map((s) => api.delete(`/services/${s.id}`)));
+      setServices([]);
+      setHiddenServices([]);
+      setClearServicesConfirm(false);
+    } catch (e) {
+      console.error("Failed to clear services", e);
+    } finally {
+      setClearingServices(false);
+    }
+  };
+
+  const handleClearStations = async () => {
+    setClearingStations(true);
+    try {
+      const snapshot = await getDocs(collection(db, "stations"));
+      await Promise.all(
+        snapshot.docs.map((d) => deleteDoc(doc(db, "stations", d.id))),
+      );
+      setClearStationsConfirm(false);
+    } catch (e) {
+      console.error("Failed to clear stations", e);
+    } finally {
+      setClearingStations(false);
+    }
+  };
+  ////////////////////////////////////////////////////////////////////////
 
   // ── Fetch settings + categories from DB ───────────────
   useEffect(() => {
@@ -282,6 +374,15 @@ const Settings = () => {
           api.get("/settings/categories"),
         ]);
         const s = settingsData.settings || {};
+        // add this inside the try block of your existing useEffect alongside your other api.get calls
+        const servicesData = await api.get("/services/");
+        const fetchedServices = servicesData.services || servicesData || [];
+        setServices(fetchedServices);
+        setHiddenServices(
+          fetchedServices
+            .filter((s) => s.status === "Unavailable")
+            .map((s) => s.id),
+        );
         setShopName(s.shop_name || "");
         setAddress(s.address || "");
         setShopPhone(s.phone || "");
@@ -554,295 +655,299 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* ══ SHOP INFO CARD ══ */}
+        {/* ══ SERVICE SETTINGS CARD ══ */}
         <div className={`border rounded-2xl shadow-sm overflow-hidden ${card}`}>
           <CardHeader
-            icon={<IconShop />}
-            title="Shop Information"
-            txt={txt}
-            head={head}
-          />
-          <div className="p-5">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Shop Name */}
-              <InputField
-                label="Shop Name"
-                value={shopName}
-                onChange={setShopName}
-                placeholder="Your shop name"
-                span2
-                inp={inp}
-                lbl={lbl}
-              />
-
-              {/* Location / Address */}
-              <div className="col-span-2">
-                <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-                  Location / Address
-                </label>
-                <div
-                  className={`flex items-center gap-2 border rounded-xl px-3 py-2 transition-all ${inp}`}
-                >
-                  <span className="text-gray-400 flex-shrink-0">
-                    <IconLocation />
-                  </span>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Street, City, Country"
-                    className="flex-1 bg-transparent outline-none text-sm"
-                  />
-                  <button
-                    onClick={getCurrentLocation}
-                    className="text-xs text-orange-500 hover:text-orange-600 font-semibold flex-shrink-0 whitespace-nowrap cursor-pointer"
-                  >
-                    Use Current
-                  </button>
-                </div>
-                {locMsg && (
-                  <p
-                    className={`text-xs mt-1 font-medium ${locMsg.startsWith("ok:") ? "text-green-500" : locMsg === "Detecting location..." ? "text-orange-500" : "text-red-500"}`}
-                  >
-                    {locMsg.startsWith("ok:") ? "✓ " : ""}
-                    {locMsg.replace("ok:", "")}
-                  </p>
-                )}
-                {latitude && longitude && (
-                  <p className={`text-xs mt-0.5 ${sub}`}>
-                    📍 {latitude.toFixed(5)}, {longitude.toFixed(5)}
-                  </p>
-                )}
-              </div>
-
-              {/* Phone & Email */}
-              <InputField
-                label="Phone Number"
-                value={shopPhone}
-                onChange={setShopPhone}
-                placeholder="+92-300-0000000"
-                inp={inp}
-                lbl={lbl}
-              />
-              <InputField
-                label="Email"
-                value={shopEmail}
-                onChange={setShopEmail}
-                placeholder="shop@example.com"
-                type="email"
-                inp={inp}
-                lbl={lbl}
-              />
-
-              {/* Category */}
-              <div className="col-span-2">
-                <SelectField
-                  label="Shop Category"
-                  value={category}
-                  onChange={setCategory}
-                  options={categories}
-                  span2
-                  sel={sel}
-                  lbl={lbl}
-                />
-                {/* Add new category inline */}
-                <div className="flex items-center gap-2 mt-2">
-                  <input
-                    type="text"
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addCategory()}
-                    placeholder="Add new category..."
-                    className={`flex-1 px-3 py-1.5 text-xs border rounded-lg outline-none transition-all ${inp}`}
-                  />
-                  <button
-                    onClick={addCategory}
-                    disabled={catSaving || !newCategory.trim()}
-                    className="text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    {catSaving ? "..." : "+ Add"}
-                  </button>
-                </div>
-                {catMsg && (
-                  <p
-                    className={`text-xs mt-1 font-medium ${catMsg.startsWith("ok:") ? "text-green-500" : "text-red-500"}`}
-                  >
-                    {catMsg.startsWith("ok:") ? "✓ " : "✕ "}
-                    {catMsg.slice(3)}
-                  </p>
-                )}
-              </div>
-
-              {/* Description */}
-              <div className="col-span-2">
-                <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your shop and services..."
-                  className={`w-full px-3 py-2 text-sm border rounded-xl outline-none transition-all resize-none ${inp}`}
-                />
-              </div>
-            </div>
-            <Msg msg={shopMsg} />
-            <div className={`flex justify-end pt-3 mt-2 border-t ${head}`}>
-              <SaveBtn onClick={saveShopInfo} loading={shopSaving} />
-            </div>
-          </div>
-        </div>
-
-        {/* ══ AVAILABILITY CARD ══ */}
-        <div className={`border rounded-2xl shadow-sm overflow-hidden ${card}`}>
-          <CardHeader
-            icon={<IconClock />}
-            title="Availability"
+            icon={<IconPause />}
+            title="Service Settings"
             txt={txt}
             head={head}
           />
           <div className="p-5 flex flex-col gap-4">
-            <p className={`text-xs font-medium ${lbl}`}>Working Hours</p>
-
-            {/* Mon–Fri */}
-            <div className="flex items-center gap-2">
-              <span className={`text-xs w-24 flex-shrink-0 ${sub}`}>
-                Mon – Fri
-              </span>
-              <select
-                value={monFriOpen}
-                onChange={(e) => setMonFriOpen(e.target.value)}
-                className={`flex-1 px-2 py-1.5 text-xs border rounded-lg outline-none ${sel}`}
-              >
-                {OPEN_TIMES.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-              <span className={`text-xs ${sub}`}>—</span>
-              <select
-                value={monFriClose}
-                onChange={(e) => setMonFriClose(e.target.value)}
-                className={`flex-1 px-2 py-1.5 text-xs border rounded-lg outline-none ${sel}`}
-              >
-                {CLOSE_TIMES.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Saturday */}
-            <div className="flex items-center gap-2">
-              <span className={`text-xs w-24 flex-shrink-0 ${sub}`}>
-                Saturday
-              </span>
-              <select
-                value={satOpen}
-                onChange={(e) => setSatOpen(e.target.value)}
-                className={`flex-1 px-2 py-1.5 text-xs border rounded-lg outline-none ${sel}`}
-              >
-                {OPEN_TIMES.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-              <span className={`text-xs ${sub}`}>—</span>
-              <select
-                value={satClose}
-                onChange={(e) => setSatClose(e.target.value)}
-                className={`flex-1 px-2 py-1.5 text-xs border rounded-lg outline-none ${sel}`}
-              >
-                {CLOSE_TIMES.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sunday */}
-            <div className="flex items-center gap-2">
-              <span className={`text-xs w-24 flex-shrink-0 ${sub}`}>
-                Sunday
-              </span>
-              <button
-                onClick={() => setSunOff(!sunOff)}
-                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
-                  sunOff
-                    ? D
-                      ? "bg-[#2a2d3e] text-gray-400 hover:text-red-400"
-                      : "bg-gray-100 text-gray-400 hover:text-red-500"
-                    : "bg-green-500/10 text-green-500 hover:bg-red-50 hover:text-red-500"
-                }`}
-              >
-                {sunOff ? "OFF — click to open" : "Open — click to close"}
-              </button>
-            </div>
-
-            {/* Break */}
-            <div className={`pt-3 border-t ${head}`}>
-              <p className={`text-xs font-medium mb-2 ${lbl}`}>Break Time</p>
-              <div className="flex items-center gap-2">
-                <select
-                  value={breakStart}
-                  onChange={(e) => setBreakStart(e.target.value)}
-                  className={`flex-1 px-2 py-1.5 text-xs border rounded-lg outline-none ${sel}`}
-                >
-                  {BREAK_START.map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
-                <span className={`text-xs ${sub}`}>—</span>
-                <select
-                  value={breakEnd}
-                  onChange={(e) => setBreakEnd(e.target.value)}
-                  className={`flex-1 px-2 py-1.5 text-xs border rounded-lg outline-none ${sel}`}
-                >
-                  {BREAK_END.map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
+            {/* Pause all services */}
+            <div
+              className={`flex items-center justify-between gap-4 p-4 rounded-xl border ${D ? "bg-[#0f1117] border-[#2a2d3e]" : "bg-gray-50 border-gray-100"}`}
+            >
+              <div>
+                <p className={`text-sm font-medium ${txt}`}>
+                  Pause All Services
+                </p>
+                <p className={`text-xs mt-0.5 ${sub}`}>
+                  Temporarily hide all services from customers without deleting
+                  them
+                </p>
               </div>
-            </div>
-
-            {/* Slot */}
-            <div className={`pt-3 border-t ${head}`}>
-              <p className={`text-xs font-medium mb-2 ${lbl}`}>
-                Time Slot Duration
-              </p>
-              <div className="flex items-center gap-4">
-                {SLOTS.map((s) => (
-                  <label
-                    key={s}
-                    className="flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <input
-                      type="radio"
-                      name="slot"
-                      checked={slotDuration === s}
-                      onChange={() => setSlotDuration(s)}
-                      className="accent-orange-500"
-                    />
-                    <span className={`text-xs ${txt}`}>{s}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Max bookings */}
-            <div className={`pt-3 border-t ${head}`}>
-              <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-                Max Bookings Per Day
-              </label>
-              <input
-                type="number"
-                value={maxBookings}
-                min={1}
-                onChange={(e) => setMaxBookings(Number(e.target.value))}
-                className={`w-28 px-3 py-2 text-sm border rounded-xl outline-none transition-all ${inp}`}
+              <Toggle
+                enabled={servicesPaused}
+                onToggle={setServicesPaused}
+                dark={D}
               />
             </div>
 
-            <Msg msg={availMsg} />
-            <div className={`flex justify-end pt-2 border-t ${head}`}>
-              <SaveBtn onClick={saveAvailability} loading={availSaving} />
+            {/* Default service visibility */}
+            <div
+              className={`flex flex-col gap-3 p-4 rounded-xl border ${D ? "bg-[#0f1117] border-[#2a2d3e]" : "bg-gray-50 border-gray-100"}`}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className={`text-sm font-medium ${txt}`}>
+                    Hide Specific Services
+                  </p>
+                  <p className={`text-xs mt-0.5 ${sub}`}>
+                    Select services to hide from customers without deleting them
+                  </p>
+                </div>
+                <Toggle
+                  enabled={showVisibilityDropdown}
+                  onToggle={(val) => {
+                    setShowVisibilityDropdown(val);
+                    localStorage.setItem("hideServicesToggle", val);
+                  }}
+                  dark={D}
+                />
+              </div>
+
+              {showVisibilityDropdown && (
+                <div className={`flex flex-col gap-2 pt-3 border-t ${head}`}>
+                  {services.length === 0 ? (
+                    <p className={`text-xs ${sub}`}>
+                      No services found. Add services first.
+                    </p>
+                  ) : (
+                    services.map((service) => {
+                      const isHidden = hiddenServices.includes(service.id);
+                      return (
+                        <div
+                          key={service.id}
+                          className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${
+                            isHidden
+                              ? D
+                                ? "border-orange-500/40 bg-orange-500/10"
+                                : "border-orange-300 bg-orange-50"
+                              : D
+                                ? "border-[#2a2d3e] bg-[#1a1d27]"
+                                : "border-gray-100 bg-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className={
+                                isHidden ? "text-orange-500" : `${sub}`
+                              }
+                            >
+                              <IconEye />
+                            </span>
+                            <div>
+                              <p className={`text-xs font-medium ${txt}`}>
+                                {service.name}
+                              </p>
+                              <p className={`text-xs ${sub}`}>
+                                Rs {service.price} · {service.duration}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            // onClick={() => {
+                            //   setHiddenServices((prev) =>
+                            //     isHidden
+                            //       ? prev.filter((id) => id !== service.id)
+                            //       : [...prev, service.id],
+                            //   );
+                            // }}
+                            disabled={togglingServiceId === service.id}
+                            onClick={async () => {
+                              setTogglingServiceId(service.id);
+                              const newStatus = isHidden
+                                ? "Active"
+                                : "Unavailable";
+                              try {
+                                await api.put(`/services/${service.id}`, {
+                                  name: service.name,
+                                  price: service.price,
+                                  duration: service.duration,
+                                  description: service.description || "",
+                                  status: newStatus,
+                                  rating: service.rating || null,
+                                  image_url: service.image_url || "",
+                                  station_ids: service.station_ids || [],
+                                });
+                                setServices((prev) =>
+                                  prev.map((s) =>
+                                    s.id === service.id
+                                      ? { ...s, status: newStatus }
+                                      : s,
+                                  ),
+                                );
+                                setHiddenServices((prev) =>
+                                  isHidden
+                                    ? prev.filter((id) => id !== service.id)
+                                    : [...prev, service.id],
+                                );
+                              } catch (e) {
+                                console.error(
+                                  "Failed to update service status",
+                                  e,
+                                );
+                              } finally {
+                                setTogglingServiceId(null);
+                              }
+                            }}
+                            className={`text-xs font-medium px-3 py-1 rounded-lg border transition-all cursor-pointer disabled:opacity-60 ${
+                              isHidden
+                                ? "text-orange-500 border-orange-300 hover:bg-orange-100"
+                                : D
+                                  ? "text-gray-400 border-[#2a2d3e] hover:border-gray-500"
+                                  : "text-gray-500 border-gray-200 hover:border-gray-300"
+                            }`}
+                          >
+                            {togglingServiceId === service.id ? (
+                              <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin inline-block" />
+                            ) : isHidden ? (
+                              "Unavailable"
+                            ) : (
+                              "Available"
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+
+                  {hiddenServices.length > 0 && (
+                    <div
+                      className={`flex items-center justify-between pt-2 border-t ${head}`}
+                    >
+                      <p className={`text-xs ${sub}`}>
+                        {hiddenServices.length} service
+                        {hiddenServices.length > 1 ? "s" : ""} hidden
+                      </p>
+                      <button
+                        onClick={() => setHiddenServices([])}
+                        className={`text-xs text-orange-500 hover:text-orange-600 font-medium cursor-pointer`}
+                      >
+                        Show all
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ══ NOTIFICATIONS CARD ══ */}
+        <div className={`border rounded-2xl shadow-sm overflow-hidden ${card}`}>
+          <CardHeader
+            icon={<IconBell />}
+            title="Notifications"
+            txt={txt}
+            head={head}
+          />
+          <div className="p-5 flex flex-col gap-4">
+            <div
+              className={`flex items-center justify-between gap-4 p-4 rounded-xl border ${D ? "bg-[#0f1117] border-[#2a2d3e]" : "bg-gray-50 border-gray-100"}`}
+            >
+              <div>
+                <p className={`text-sm font-medium ${txt}`}>
+                  New Booking Emails
+                </p>
+                <p className={`text-xs mt-0.5 ${sub}`}>
+                  Receive an email on your registered address whenever a
+                  customer books
+                </p>
+              </div>
+              <Toggle
+                enabled={notifyNewBooking}
+                onToggle={setNotifyNewBooking}
+                dark={D}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ══ DANGER ZONE CARD ══ */}
+        <div
+          className={`border rounded-2xl shadow-sm overflow-hidden ${D ? "bg-[#1a1d27] border-red-900/40" : "bg-white border-red-100"}`}
+        >
+          <div
+            className={`flex items-center gap-2.5 px-5 py-3.5 border-b ${D ? "border-red-900/40 bg-red-900/10" : "border-red-100 bg-red-50/40"}`}
+          >
+            <span className="text-red-500">
+              <IconTrash />
+            </span>
+            <p className="text-sm font-semibold text-red-500">Danger Zone</p>
+          </div>
+          <div className="p-5 flex flex-col gap-4">
+            {/* Clear all services */}
+            <div
+              className={`flex items-center justify-between gap-4 p-4 rounded-xl border ${D ? "bg-[#0f1117] border-[#2a2d3e]" : "bg-gray-50 border-gray-100"}`}
+            >
+              <div>
+                <p className={`text-sm font-medium ${txt}`}>
+                  Clear All Services
+                </p>
+                <p
+                  className={`text-xs mt-0.5 ${clearServicesConfirm ? "text-red-400 font-medium" : sub}`}
+                >
+                  {clearServicesConfirm
+                    ? "⚠ Click again to confirm — this cannot be undone"
+                    : "Permanently delete all your services"}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  if (!clearServicesConfirm) {
+                    setClearServicesConfirm(true);
+                    return;
+                  }
+                  // TODO: wire up API call
+                  setClearServicesConfirm(false);
+                }}
+                className={`text-xs font-semibold flex items-center gap-1.5 px-4 py-2 rounded-xl border transition-all flex-shrink-0 cursor-pointer ${
+                  clearServicesConfirm
+                    ? "bg-red-500 hover:bg-red-600 text-white border-red-500"
+                    : "text-red-500 border-red-200 hover:bg-red-50"
+                }`}
+              >
+                <IconTrash />
+                {clearServicesConfirm ? "Confirm" : "Clear"}
+              </button>
+            </div>
+
+            {/* Clear all stations */}
+            <div
+              className={`flex items-center justify-between gap-4 p-4 rounded-xl border ${D ? "bg-[#0f1117] border-[#2a2d3e]" : "bg-gray-50 border-gray-100"}`}
+            >
+              <div>
+                <p className={`text-sm font-medium ${txt}`}>
+                  Clear All Stations
+                </p>
+                <p
+                  className={`text-xs mt-0.5 ${clearStationsConfirm ? "text-red-400 font-medium" : sub}`}
+                >
+                  {clearStationsConfirm
+                    ? "⚠ Click again to confirm — this cannot be undone"
+                    : "Permanently delete all your stations"}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  if (!clearStationsConfirm) {
+                    setClearStationsConfirm(true);
+                    return;
+                  }
+                  // TODO: wire up API call
+                  setClearStationsConfirm(false);
+                }}
+                className={`text-xs font-semibold flex items-center gap-1.5 px-4 py-2 rounded-xl border transition-all flex-shrink-0 cursor-pointer ${
+                  clearStationsConfirm
+                    ? "bg-red-500 hover:bg-red-600 text-white border-red-500"
+                    : "text-red-500 border-red-200 hover:bg-red-50"
+                }`}
+              >
+                <IconTrash />
+                {clearStationsConfirm ? "Confirm" : "Clear"}
+              </button>
             </div>
           </div>
         </div>

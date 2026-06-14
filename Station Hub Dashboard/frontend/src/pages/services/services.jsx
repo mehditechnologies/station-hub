@@ -754,10 +754,28 @@ const Services = () => {
             .filter(Boolean);
 
           return (
+            // <div
+            //   key={svc.id}
+            //   className={`border rounded-2xl shadow-sm overflow-hidden flex flex-col transition-colors ${D ? "bg-[#1a1d27] border-[#2a2d3e]" : "bg-white border-gray-100"}`}
+            // >
             <div
               key={svc.id}
-              className={`border rounded-2xl shadow-sm overflow-hidden flex flex-col transition-colors ${D ? "bg-[#1a1d27] border-[#2a2d3e]" : "bg-white border-gray-100"}`}
+              className={`relative border rounded-2xl shadow-sm overflow-hidden flex flex-col transition-colors ${D ? "bg-[#1a1d27] border-[#2a2d3e]" : "bg-white border-gray-100"}`}
             >
+              {/* Unavailable overlay */}
+              {svc.status === "Unavailable" && (
+                <div
+                  className={`absolute inset-0 z-10 rounded-2xl flex items-center justify-center ${D ? "bg-[#0f1117]/70" : "bg-white/70"} backdrop-blur-[1.2px]`}
+                >
+                  <div className={`flex flex-col items-center  gap-1.5`}>
+                    <span
+                      className={`  text-xs  font-semibold px-3 py-1.5 rounded-full border ${D ? "bg-[#1a1d27] text-gray-400 border-[#FF6A00]" : "bg-white text-gray-400 border-[#FF6A00]"}`}
+                    >
+                      Unavailable
+                    </span>
+                  </div>
+                </div>
+              )}
               {svc.image_url ? (
                 <img
                   src={svc.image_url}
@@ -780,18 +798,40 @@ const Services = () => {
                     {svc.name}
                   </p>
                   <span
+                    // className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1 ${
+                    //   svc.status === "Active"
+                    //     ? D
+                    //       ? "bg-green-500/20 text-green-400"
+                    //       : "bg-green-50 text-green-600"
+                    //     : D
+                    //       ? "bg-yellow-500/20 text-yellow-400"
+                    //       : "bg-yellow-50 text-yellow-600"
+                    // }`}
                     className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1 ${
                       svc.status === "Active"
                         ? D
                           ? "bg-green-500/20 text-green-400"
                           : "bg-green-50 text-green-600"
-                        : D
-                          ? "bg-yellow-500/20 text-yellow-400"
-                          : "bg-yellow-50 text-yellow-600"
+                        : svc.status === "Unavailable"
+                          ? D
+                            ? "bg-gray-500/20 text-gray-400"
+                            : "bg-gray-100 text-gray-400"
+                          : D
+                            ? "bg-yellow-500/20 text-yellow-400"
+                            : "bg-yellow-50 text-yellow-600"
                     }`}
                   >
-                    <span
+                    {/* <span
                       className={`w-1.5 h-1.5 rounded-full ${svc.status === "Active" ? "bg-green-500" : "bg-yellow-500"}`}
+                    /> */}
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        svc.status === "Active"
+                          ? "bg-green-500"
+                          : svc.status === "Unavailable"
+                            ? "bg-gray-400"
+                            : "bg-yellow-500"
+                      }`}
                     />
                     {svc.status}
                   </span>
