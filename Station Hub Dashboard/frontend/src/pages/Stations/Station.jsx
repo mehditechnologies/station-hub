@@ -7,6 +7,8 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  query,
+  where,
 } from "firebase/firestore";
 import { db } from "../../firebase";
 
@@ -694,8 +696,16 @@ const Stations = () => {
 
   // ── Firestore real-time listener ───────────────────────
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const ownerId = payload.sub;
+
     const unsub = onSnapshot(
-      collection(db, "stations"),
+      query(collection(db, "stations"), where("owner_id", "==", ownerId)),
       (snapshot) => {
         const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
         setStations(items);
@@ -728,6 +738,10 @@ const Stations = () => {
     try {
       console.log("Trying to save:", form); // ← add this
       const token = localStorage.getItem("token");
+      if (!token) {
+        setFormError("You are not logged in. Please log in and try again.");
+        return;
+      }
       const payload = JSON.parse(atob(token.split(".")[1]));
       const docRef = await addDoc(collection(db, "stations"), {
         ...form,

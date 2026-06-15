@@ -54,15 +54,8 @@ const LoginPage = () => {
     try {
       const data = await api.auth.login(email, password);
       if (data.token) {
-        if (rememberMe) {
-          console.log("saving to localStorage"); // ← add this
-          localStorage.setItem("token", data.token);
-          localStorage.setItem("user", JSON.stringify(data.user));
-        } else {
-          console.log("saving to sessionStorage"); // ← add this
-          sessionStorage.setItem("token", data.token);
-          sessionStorage.setItem("user", JSON.stringify(data.user));
-        }
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
         navigate("/dashboard");
       } else {
         setError(data.detail || "Invalid credentials");

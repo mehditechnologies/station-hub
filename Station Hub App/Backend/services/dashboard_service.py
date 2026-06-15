@@ -4,18 +4,31 @@ from datetime import datetime
 
 
 async def get_dashboard_stats(user_id: str) -> dict:
-    # ── Fetch all collections ──────────────────────────────
-    bookings_docs = list(db.collection("bookings").stream())
-    stations_docs = list(db.collection("stations").stream())
-    users_docs    = list(db.collection("users").stream())
+    # ── Fetch only this owner's stations ──────────────────
+    stations_docs = list(db.collection("stations").where("owner_id", "==", user_id).stream())
+    station_ids = [d.id for d in stations_docs]
+
+    # ── Fetch only bookings for this owner's stations ─────
+    if station_ids:
+        bookings_docs = []
+        # Firestore 'in' query supports max 30 items at a time
+        for i in range(0, len(station_ids), 30):
+            chunk = station_ids[i:i+30]
+            docs = list(db.collection("bookings").where("station_id", "in", chunk).stream())
+            bookings_docs.extend(docs)
+    else:
+        bookings_docs = []
+
+    # ── Fetch all users (for count) ────────────────────────
+    users_docs = list(db.collection("users").stream())
 
     bookings = [{"id": d.id, **d.to_dict()} for d in bookings_docs]
-    today    = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.utcnow().strftime("%Y-%m-%d")
 
     # ── Stats ──────────────────────────────────────────────
-    total_bookings  = len(bookings)
-    total_stations  = len(stations_docs)
-    total_users     = len(users_docs)
+    total_bookings = len(bookings)
+    total_stations = len(stations_docs)
+    total_users    = len(users_docs)
 
     todays_earnings = sum(
         float(b.get("price", 0) or 0)

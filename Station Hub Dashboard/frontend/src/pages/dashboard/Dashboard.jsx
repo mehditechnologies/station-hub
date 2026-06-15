@@ -94,13 +94,7 @@ const Dashboard = () => {
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
-  // useEffect(() => {
-  //   const handleThemeChange = () => {
-  //     setDark(localStorage.getItem('theme') === 'dark')
-  //   }
-  //   window.addEventListener('storage', handleThemeChange)
-  //   return () => window.removeEventListener('storage', handleThemeChange)
-  // }, [])
+  
   const { dark } = useTheme()
 
   const updateStatus = async (id, status) => {
