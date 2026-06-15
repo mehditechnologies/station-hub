@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from config.firebase import db
 from models.booking_model import BookingModel
 from schemas.booking_schemas import BookingRequest
+from utils.email_handler import send_booking_email
 
 
 async def create_booking(body: BookingRequest, user_id: str) -> dict:
@@ -22,6 +23,20 @@ async def create_booking(body: BookingRequest, user_id: str) -> dict:
 
     doc_ref = db.collection("bookings").add(booking.to_dict())
     booking_id = doc_ref[1].id
+
+    # Send email notification to owner
+    try:
+        station_data = station_doc.to_dict()
+        owner_id = station_data.get("owner_id")
+        station_name = station_data.get("name", "your station")
+        if owner_id:
+            owner_doc = db.collection("users").document(owner_id).get()
+            if owner_doc.exists:
+                owner_email = owner_doc.to_dict().get("email")
+                if owner_email:
+                    send_booking_email(owner_email, booking.to_dict(), station_name)
+    except Exception as e:
+        print(f"Notification error: {e}")
 
     return {
         "message": "Booking confirmed",

@@ -135,11 +135,7 @@ const IconBreakTime = () => (
       strokeLinejoin="round"
       d="M15 11h2a2 2 0 010 4h-2"
     />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M8 6v2M12 5v3"
-    />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 6v2M12 5v3" />
   </svg>
 );
 const IconClock = () => (
@@ -731,11 +727,14 @@ const Stations = () => {
     setFormError("");
     try {
       console.log("Trying to save:", form); // ← add this
+      const token = localStorage.getItem("token");
+      const payload = JSON.parse(atob(token.split(".")[1]));
       const docRef = await addDoc(collection(db, "stations"), {
         ...form,
+        owner_id: payload.sub,
         created_at: new Date().toISOString(),
       });
-      console.log("Saved with ID:", docRef.id); // ← add this
+      console.log("Saved with ID:", docRef.id);
       setIsAdding(false);
     } catch (e) {
       console.error("Save error:", e); // ← add this
@@ -999,7 +998,7 @@ const Stations = () => {
                 <div
                   className={`flex items-center gap-1.5 text-xs mb-1.5 ${D ? "text-gray-400" : "text-gray-500"}`}
                 >
-                  <IconBreakTime/>
+                  <IconBreakTime />
                   <span>
                     Break: {stn.break_start} — {stn.break_end}
                   </span>
