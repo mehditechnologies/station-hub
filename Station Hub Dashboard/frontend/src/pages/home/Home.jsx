@@ -277,13 +277,13 @@ export default function HomeLayout() {
 
         {/* Right: notifications + avatar */}
         <div className="flex items-center gap-3">
-          <button
+          {/* <button
             onClick={addTestBooking}
             type="button"
             className=" bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-lg transition-all cursor-pointer"
           >
             + Add Test Booking
-          </button>
+          </button> */}
           <div
             onClick={() => navigate("/Notify")}
             className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${bellBg}`}
@@ -299,9 +299,9 @@ export default function HomeLayout() {
               </span>
             )}
           </div>
-          <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-semibold cursor-pointer">
+          {/* <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-semibold cursor-pointer">
             SJ
-          </div>
+          </div> */}
         </div>
       </header>
 

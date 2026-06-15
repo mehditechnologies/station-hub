@@ -9,6 +9,7 @@ import {
   onSnapshot,
   query,
   where,
+  getDocs, // ← add
 } from "firebase/firestore";
 import { db } from "../../firebase";
 
@@ -680,6 +681,145 @@ const StationForm = ({
   );
 };
 
+// ── Station Services Panel ─────────────────────────────────
+const StationServicesPanel = ({ stationId, D }) => {
+  const [rows, setRows] = useState([]);
+  const [toggling, setToggling] = useState(null);
+
+  useEffect(() => {
+    // listen to all serviceStationStatus docs for this station
+    const q = query(
+      collection(db, "serviceStationStatus"),
+      where("stationId", "==", stationId),
+    );
+
+    const unsub = onSnapshot(q, async (snapshot) => {
+      if (snapshot.empty) {
+        setRows([]);
+        return;
+      }
+
+      // for each status doc, fetch the service name+price
+      const results = await Promise.all(
+        snapshot.docs.map(async (statusDoc) => {
+          const { serviceId, isAvailable } = statusDoc.data();
+          try {
+            const svcSnap = await getDocs(
+              query(
+                collection(db, "services"),
+                where("__name__", "==", serviceId),
+              ),
+            );
+            if (svcSnap.empty) return null;
+            const svc = svcSnap.docs[0].data();
+            return {
+              statusDocId: statusDoc.id,
+              serviceId,
+              isAvailable,
+              name: svc.name,
+              price: svc.price,
+            };
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      setRows(results.filter(Boolean));
+    });
+
+    return () => unsub();
+  }, [stationId]);
+
+  const handleToggle = async (statusDocId, current) => {
+    setToggling(statusDocId);
+    try {
+      await updateDoc(doc(db, "serviceStationStatus", statusDocId), {
+        isAvailable: !current,
+      });
+    } catch (e) {
+      console.error("Toggle failed:", e);
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  return (
+    <div
+      className={`rounded-xl p-3 my-1 ${
+        D
+          ? "bg-[#0f1117] border border-[#2a2d3e]"
+          : "bg-gray-50 border border-gray-100"
+      }`}
+    >
+      {/* Panel header */}
+      <p
+        className={`text-[11px] font-semibold uppercase tracking-wider mb-2.5 ${D ? "text-gray-500" : "text-gray-400"}`}
+      >
+        Services
+      </p>
+
+      {rows.length === 0 ? (
+        <p className={`text-xs ${D ? "text-gray-600" : "text-gray-400"}`}>
+          No services linked to this station.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2 max-h-20 overflow-y-auto pr-2 services-scroll">
+          {rows.map((row) => (
+            <div
+              key={row.statusDocId}
+              className={`flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg ${
+                D ? "bg-[#1a1d27]" : "bg-white border border-gray-100"
+              }`}
+            >
+              {/* Name + Price */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className={`text-xs font-medium truncate ${
+                    row.isAvailable
+                      ? D
+                        ? "text-gray-200"
+                        : "text-gray-700"
+                      : D
+                        ? "text-gray-600"
+                        : "text-gray-400"
+                  }`}
+                >
+                  {row.name}
+                </span>
+                <span
+                  className={`text-[11px] flex-shrink-0 ${D ? "text-gray-600" : "text-gray-400"}`}
+                >
+                  PKR {Number(row.price).toLocaleString()}
+                </span>
+              </div>
+
+              {/* Toggle */}
+              <button
+                onClick={() => handleToggle(row.statusDocId, row.isAvailable)}
+                disabled={toggling === row.statusDocId}
+                className={`relative flex-shrink-0 w-8 h-4.5 rounded-full transition-colors duration-200 focus:outline-none ${
+                  row.isAvailable
+                    ? "bg-orange-500"
+                    : D
+                      ? "bg-[#2a2d3e]"
+                      : "bg-gray-200"
+                } ${toggling === row.statusDocId ? "opacity-50" : ""}`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-white rounded-full shadow transition-transform duration-200 ${
+                    row.isAvailable ? "translate-x-3.5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Main Component ─────────────────────────────────────────
 const Stations = () => {
   const { dark } = useTheme();
@@ -1027,6 +1167,9 @@ const Stations = () => {
                   {stn.description}
                 </p>
               )}
+
+              {/* ── Services Panel ── */}
+              <StationServicesPanel stationId={stn.id} D={D} />
 
               <div className="flex-1" />
 

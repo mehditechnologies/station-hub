@@ -1,11 +1,22 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { api } from "../../api/api";
 import { useTheme } from "../../context/theme.Context";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../../firebase";
+// replace your existing firestore import line with this
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+  doc,
+  setDoc,
+  deleteDoc,
+  getDocs,
+} from "firebase/firestore";
 
 // ── cloudinary setUp ──────────────────────────────────────────────
-const CLOUDINARY_CLOUD_NAME = "dgq7ielys"; // ← replace
+// const CLOUDINARY_CLOUD_NAME = "dgq7ielys"; // ← replace
+const CLOUDINARY_CLOUD_NAME = "dqlmva24c"; // ← replace
 const CLOUDINARY_UPLOAD_PRESET = "StationHub"; // ← replace
 
 async function uploadToCloudinary(file) {
@@ -150,7 +161,7 @@ const IconRefresh = () => (
     />
   </svg>
 );
-
+/////////////////////////////////////////////////////////////////////////////////////////
 // ── Empty state ────────────────────────────────────────────
 const EmptyState = ({ onAdd, D }) => (
   <div className="col-span-3 flex flex-col items-center justify-center py-20 text-center">
@@ -199,6 +210,7 @@ const EMPTY_FORM = {
   image_url: "",
   station_ids: [], // ← new field
 };
+/////////////////////////////////////////////////////////////////////////////////////////
 
 const ServiceForm = ({
   initial = EMPTY_FORM,
@@ -255,6 +267,129 @@ const ServiceForm = ({
         )}
 
         <div className="grid grid-cols-3 gap-4">
+          {/* ── Station multi-select ── */}
+          <div className="col-span-3">
+            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
+              Stations <span className="text-red-500">*</span>
+            </label>
+
+            {stations.length === 0 ? (
+              <p
+                className={`text-[11px] mt-1 ${D ? "text-gray-600" : "text-gray-400"}`}
+              >
+                No stations found. Add a station first.
+              </p>
+            ) : (
+              <div
+                className={`w-full px-3 py-2 text-sm border rounded-xl ${inp} space-y-1.5 max-h-40 overflow-y-auto`}
+              >
+                {stations.map((station) => (
+                  <label
+                    key={station.id}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      value={station.id}
+                      checked={form.station_ids?.includes(station.id)}
+                      onChange={(e) => {
+                        const current = form.station_ids || [];
+                        if (e.target.checked) {
+                          set("station_ids", [...current, station.id]);
+                        } else {
+                          set(
+                            "station_ids",
+                            current.filter((id) => id !== station.id),
+                          );
+                        }
+                      }}
+                      className="accent-blue-500"
+                    />
+                    <span>{station.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Service Name */}
+          <div className="col-span-2">
+            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
+              Service Name
+            </label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
+              placeholder="e.g. Premium Detail"
+              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
+            />
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
+              Status
+            </label>
+            <select
+              value={form.status}
+              onChange={(e) => set("status", e.target.value)}
+              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
+            >
+              <option>Active</option>
+              <option>Inactive</option>
+            </select>
+          </div>
+
+          {/* Price */}
+          <div>
+            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
+              Price (PKR)
+            </label>
+            <div className="relative">
+              <span
+                className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium ${D ? "text-gray-600" : "text-gray-400"}`}
+              >
+                PKR
+              </span>
+              <input
+                type="number"
+                value={form.price}
+                onChange={(e) => set("price", e.target.value)}
+                placeholder="2500"
+                className={`w-full pl-10 pr-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
+              />
+            </div>
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
+              Duration
+            </label>
+            <input
+              type="text"
+              value={form.duration}
+              onChange={(e) => set("duration", e.target.value)}
+              placeholder="e.g. 20–30 mins"
+              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
+            />
+          </div>
+
+          {/* Description */}
+          <div className="col-span-3">
+            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
+              Description
+            </label>
+            <textarea
+              rows={3}
+              value={form.description}
+              onChange={(e) => set("description", e.target.value)}
+              placeholder="Describe your service briefly..."
+              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all resize-none ${inp}`}
+            />
+          </div>
+
           {/* Image upload */}
           <div className="col-span-3">
             <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
@@ -340,151 +475,6 @@ const ServiceForm = ({
               }}
             />
           </div>
-
-          {/* Service Name */}
-          <div className="col-span-2">
-            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-              Service Name
-            </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-              placeholder="e.g. Premium Detail"
-              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
-            />
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-              Status
-            </label>
-            <select
-              value={form.status}
-              onChange={(e) => set("status", e.target.value)}
-              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
-            >
-              <option>Active</option>
-              <option>Inactive</option>
-            </select>
-          </div>
-
-          {/* Price */}
-          <div>
-            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-              Price (PKR)
-            </label>
-            <div className="relative">
-              <span
-                className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium ${D ? "text-gray-600" : "text-gray-400"}`}
-              >
-                PKR
-              </span>
-              <input
-                type="number"
-                value={form.price}
-                onChange={(e) => set("price", e.target.value)}
-                placeholder="2500"
-                className={`w-full pl-10 pr-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
-              />
-            </div>
-          </div>
-
-          {/* Duration */}
-          <div>
-            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-              Duration
-            </label>
-            <input
-              type="text"
-              value={form.duration}
-              onChange={(e) => set("duration", e.target.value)}
-              placeholder="e.g. 20–30 mins"
-              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
-            />
-          </div>
-
-          {/* Rating */}
-          <div>
-            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-              Rating (optional)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="5"
-              value={form.rating}
-              onChange={(e) => set("rating", e.target.value)}
-              placeholder="4.9"
-              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
-            />
-          </div>
-
-          {/* ── Station multi-select ── */}
-          <div className="col-span-3">
-            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-              Stations{" "}
-              <span
-                className={`font-normal ${D ? "text-gray-600" : "text-gray-400"}`}
-              >
-                (optional)
-              </span>
-            </label>
-
-            {stations.length === 0 ? (
-              <p
-                className={`text-[11px] mt-1 ${D ? "text-gray-600" : "text-gray-400"}`}
-              >
-                No stations found. Add a station first.
-              </p>
-            ) : (
-              <div
-                className={`w-full px-3 py-2 text-sm border rounded-xl ${inp} space-y-1.5 max-h-40 overflow-y-auto`}
-              >
-                {stations.map((station) => (
-                  <label
-                    key={station.id}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      value={station.id}
-                      checked={form.station_ids?.includes(station.id)}
-                      onChange={(e) => {
-                        const current = form.station_ids || [];
-                        if (e.target.checked) {
-                          set("station_ids", [...current, station.id]);
-                        } else {
-                          set(
-                            "station_ids",
-                            current.filter((id) => id !== station.id),
-                          );
-                        }
-                      }}
-                      className="accent-blue-500"
-                    />
-                    <span>{station.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Description */}
-          <div className="col-span-3">
-            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-              Description
-            </label>
-            <textarea
-              rows={3}
-              value={form.description}
-              onChange={(e) => set("description", e.target.value)}
-              placeholder="Describe your service briefly..."
-              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all resize-none ${inp}`}
-            />
-          </div>
         </div>
 
         <div
@@ -516,6 +506,7 @@ const ServiceForm = ({
   );
 };
 
+////////////////////////////////////////////////////////////////////////////////
 // ── Main Component ─────────────────────────────────────────
 const Services = () => {
   const [services, setServices] = useState([]);
@@ -533,22 +524,22 @@ const Services = () => {
 
   // ── Fetch stations once ───────────────────────────────
   useEffect(() => {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-  const payload = JSON.parse(atob(token.split(".")[1]));
-  const ownerId = payload.sub;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const ownerId = payload.sub;
 
-  const unsub = onSnapshot(
-    query(collection(db, "stations"), where("owner_id", "==", ownerId)),
-    (snapshot) => {
-      const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setStations(items);
-    },
-    () => setStations([])
-  );
+    const unsub = onSnapshot(
+      query(collection(db, "stations"), where("owner_id", "==", ownerId)),
+      (snapshot) => {
+        const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setStations(items);
+      },
+      () => setStations([]),
+    );
 
-  return () => unsub();
-}, []);
+    return () => unsub();
+  }, []);
 
   // ── Fetch services ────────────────────────────────────
   const fetchServices = useCallback(async () => {
@@ -588,6 +579,48 @@ const Services = () => {
     station_ids: form.station_ids || [], // ← included in every save
   });
 
+  // Creates / removes serviceStationStatus docs when a service is saved
+  const syncStationStatus = async (
+    serviceId,
+    newStationIds,
+    oldStationIds = [],
+  ) => {
+    const token = localStorage.getItem("token");
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const ownerId = payload.sub;
+
+    // stations that were added → create a doc with isAvailable: true
+    const added = newStationIds.filter((id) => !oldStationIds.includes(id));
+    // stations that were removed → delete their doc
+    const removed = oldStationIds.filter((id) => !newStationIds.includes(id));
+
+    const writes = [
+      ...added.map((stationId) => {
+        const docRef = doc(
+          db,
+          "serviceStationStatus",
+          `${serviceId}_${stationId}`,
+        );
+        return setDoc(docRef, {
+          serviceId,
+          stationId,
+          ownerId,
+          isAvailable: true,
+        });
+      }),
+      ...removed.map((stationId) => {
+        const docRef = doc(
+          db,
+          "serviceStationStatus",
+          `${serviceId}_${stationId}`,
+        );
+        return deleteDoc(docRef);
+      }),
+    ];
+
+    await Promise.all(writes);
+  };
+
   const handleAdd = async (form, imageFile) => {
     const err = validate(form);
     if (err) {
@@ -602,7 +635,12 @@ const Services = () => {
       if (imageFile) imageUrl = await uploadToCloudinary(imageFile);
 
       const data = await api.post("/services/", buildPayload(form, imageUrl));
-      setServices((prev) => [data.service, ...prev]);
+      const newService = data.service;
+
+      // sync station status docs for the new service
+      await syncStationStatus(newService.id, form.station_ids || []);
+
+      setServices((prev) => [newService, ...prev]);
       setIsAdding(false);
     } catch (e) {
       setFormError(e.message || "Failed to add service");
@@ -628,6 +666,12 @@ const Services = () => {
         `/services/${editingId}`,
         buildPayload(form, imageUrl),
       );
+
+      // old station_ids come from the service currently in state
+      const oldStationIds =
+        services.find((s) => s.id === editingId)?.station_ids || [];
+      await syncStationStatus(editingId, form.station_ids || [], oldStationIds);
+
       setServices((prev) =>
         prev.map((s) => (s.id === editingId ? { ...s, ...data.service } : s)),
       );
@@ -874,7 +918,7 @@ const Services = () => {
                   </div>
                 )}
 
-                {/* Station badge on card */}
+                {/* Station badge on card
                 {stationNames.length > 0 && (
                   <div className="flex items-center gap-1.5 flex-wrap mb-2">
                     <svg
@@ -904,7 +948,7 @@ const Services = () => {
                       </span>
                     ))}
                   </div>
-                )}
+                )} */}
 
                 {svc.description && (
                   <p

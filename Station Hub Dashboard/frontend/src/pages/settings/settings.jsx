@@ -568,7 +568,7 @@ const Settings = () => {
         {/* ══ THEME CARD ══ */}
         <div className={`border rounded-2xl shadow-sm overflow-hidden ${card}`}>
           <CardHeader
-            icon={D ? <IconSun /> : <IconMoon />}
+            icon={D ? <IconMoon /> : <IconSun />}
             title="Appearance"
             txt={txt}
             head={head}
@@ -655,7 +655,7 @@ const Settings = () => {
         </div>
 
         {/* ══ SERVICE SETTINGS CARD ══ */}
-        <div className={`border rounded-2xl shadow-sm overflow-hidden ${card}`}>
+        {/* <div className={`border rounded-2xl shadow-sm overflow-hidden ${card}`}>
           <CardHeader
             icon={<IconPause />}
             title="Service Settings"
@@ -665,7 +665,7 @@ const Settings = () => {
           <div className="p-5 flex flex-col gap-4">
           
 
-            {/* Default service visibility */}
+            Default service visibility
             <div
               className={`flex flex-col gap-3 p-4 rounded-xl border ${D ? "bg-[#0f1117] border-[#2a2d3e]" : "bg-gray-50 border-gray-100"}`}
             >
@@ -728,13 +728,7 @@ const Settings = () => {
                             </div>
                           </div>
                           <button
-                            // onClick={() => {
-                            //   setHiddenServices((prev) =>
-                            //     isHidden
-                            //       ? prev.filter((id) => id !== service.id)
-                            //       : [...prev, service.id],
-                            //   );
-                            // }}
+
                             disabled={togglingServiceId === service.id}
                             onClick={async () => {
                               setTogglingServiceId(service.id);
@@ -814,7 +808,7 @@ const Settings = () => {
               )}
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* ══ NOTIFICATIONS CARD ══ */}
         <div className={`border rounded-2xl shadow-sm overflow-hidden ${card}`}>
