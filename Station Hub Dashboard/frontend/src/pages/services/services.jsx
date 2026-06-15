@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { api } from "../../api/api";
 import { useTheme } from "../../context/theme.Context";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { db } from "../../firebase";
 
 // ── cloudinary setUp ──────────────────────────────────────────────
 const CLOUDINARY_CLOUD_NAME = "dgq7ielys"; // ← replace
@@ -531,14 +533,22 @@ const Services = () => {
 
   // ── Fetch stations once ───────────────────────────────
   useEffect(() => {
-    api
-      .get("/stations")
-      .then((data) => {
-        console.log("stations response:", data);
-        setStations(data.stations || []);
-      })
-      .catch(() => setStations([])); // fail silently — field is optional
-  }, []);
+  const token = localStorage.getItem("token");
+  if (!token) return;
+  const payload = JSON.parse(atob(token.split(".")[1]));
+  const ownerId = payload.sub;
+
+  const unsub = onSnapshot(
+    query(collection(db, "stations"), where("owner_id", "==", ownerId)),
+    (snapshot) => {
+      const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setStations(items);
+    },
+    () => setStations([])
+  );
+
+  return () => unsub();
+}, []);
 
   // ── Fetch services ────────────────────────────────────
   const fetchServices = useCallback(async () => {
