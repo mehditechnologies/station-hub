@@ -32,10 +32,10 @@ export default function ServicesScreen() {
   const params = useLocalSearchParams<{ type?: string }>();
 
   const [activeTab, setActiveTab] = useState(
-    params.type === "premium" ? params.type : "basic"
+    params.type === "premium" ? params.type : "basic",
   );
   const [services, setServices] = useState<Service[]>([]);
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favoriteKeys, setFavoriteKeys] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState({ visible: false, message: "" });
@@ -65,10 +65,10 @@ export default function ServicesScreen() {
           });
           if (favRes.ok) {
             const favData = await favRes.json();
-            const ids = new Set<string>(
-              (favData.services || []).map((s: Service) => s.id)
+            const keys = new Set<string>(
+              (favData.services || []).map((s: any) => `${s.id}_${s.tier}`),
             );
-            setFavoriteIds(ids);
+            setFavoriteKeys(keys);
           }
         }
       } catch (e) {
@@ -80,26 +80,26 @@ export default function ServicesScreen() {
     fetchData();
   }, []);
 
-  const toggleFavorite = async (serviceId: string) => {
+  const toggleFavorite = async (serviceId: string, tier: string) => {
     const token = await AsyncStorage.getItem("token");
     if (!token) {
       showToast("Please log in to save favorites");
       return;
     }
 
-    const isFavorited = favoriteIds.has(serviceId);
+    const key = `${serviceId}_${tier}`;
+    const isFavorited = favoriteKeys.has(key);
 
-    // optimistic update
-    setFavoriteIds((prev) => {
+    setFavoriteKeys((prev) => {
       const next = new Set(prev);
-      if (isFavorited) next.delete(serviceId);
-      else next.add(serviceId);
+      if (isFavorited) next.delete(key);
+      else next.add(key);
       return next;
     });
 
     try {
       if (isFavorited) {
-        await fetch(`${API_BASE}/favorites/${serviceId}`, {
+        await fetch(`${API_BASE}/favorites/${serviceId}/${tier}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -111,23 +111,23 @@ export default function ServicesScreen() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ service_id: serviceId }),
+          body: JSON.stringify({ service_id: serviceId, tier }),
         });
         showToast("Added to favorites");
       }
     } catch (e) {
-      // revert on failure
-      setFavoriteIds((prev) => {
+      setFavoriteKeys((prev) => {
         const next = new Set(prev);
-        if (isFavorited) next.add(serviceId);
-        else next.delete(serviceId);
+        if (isFavorited) next.add(key);
+        else next.delete(key);
         return next;
       });
       showToast("Something went wrong");
     }
   };
 
-  const tierKey = activeTab === "premium" ? "premium" : activeTab === "basic" ? "base" : null;
+  const tierKey =
+    activeTab === "premium" ? "premium" : activeTab === "basic" ? "base" : null;
   const filteredServices = tierKey
     ? services.filter((s) => s.tiers && s.tiers[tierKey])
     : [];
@@ -138,7 +138,11 @@ export default function ServicesScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16, paddingTop: 40 }}
+        contentContainerStyle={{
+          paddingBottom: 100,
+          paddingHorizontal: 16,
+          paddingTop: 40,
+        }}
       >
         {/* HEADER */}
         <View style={styles.header}>
@@ -162,7 +166,12 @@ export default function ServicesScreen() {
               onPress={() => setActiveTab(tab)}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
+              >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -178,7 +187,9 @@ export default function ServicesScreen() {
 
         {/* ERROR */}
         {!loading && error && (
-          <Text style={{ textAlign: "center", color: "#e74c3c", marginTop: 20 }}>
+          <Text
+            style={{ textAlign: "center", color: "#e74c3c", marginTop: 20 }}
+          >
             {error}
           </Text>
         )}
@@ -196,12 +207,15 @@ export default function ServicesScreen() {
           tierKey &&
           filteredServices.map((service) => {
             const tier = service.tiers![tierKey]!;
-            const isFavorited = favoriteIds.has(service.id);
+            const isFavorited = favoriteKeys.has(`${service.id}_${tierKey}`);
             return (
               <View key={service.id} style={styles.card}>
                 <View>
                   {service.image_url ? (
-                    <Image source={{ uri: service.image_url }} style={styles.image} />
+                    <Image
+                      source={{ uri: service.image_url }}
+                      style={styles.image}
+                    />
                   ) : (
                     <Image
                       source={require("../../../assets/images/service1.png")}
@@ -210,7 +224,7 @@ export default function ServicesScreen() {
                   )}
                   <TouchableOpacity
                     style={styles.heartBtn}
-                    onPress={() => toggleFavorite(service.id)}
+                    onPress={() => toggleFavorite(service.id, tierKey)}
                   >
                     <Ionicons
                       name={isFavorited ? "heart" : "heart-outline"}
@@ -229,7 +243,9 @@ export default function ServicesScreen() {
                     {service.rating ? (
                       <View style={styles.infoItem}>
                         <Ionicons name="star" size={14} color="#FF8C42" />
-                        <Text style={styles.infoText}>{Number(service.rating).toFixed(1)}</Text>
+                        <Text style={styles.infoText}>
+                          {Number(service.rating).toFixed(1)}
+                        </Text>
                       </View>
                     ) : null}
                     <View style={styles.infoItem}>
@@ -239,7 +255,9 @@ export default function ServicesScreen() {
                   </View>
 
                   <View style={styles.bottomRow}>
-                    <Text style={styles.price}>PKR {Number(tier.price).toLocaleString()}</Text>
+                    <Text style={styles.price}>
+                      PKR {Number(tier.price).toLocaleString()}
+                    </Text>
                     <View style={styles.btnRow}>
                       <TouchableOpacity style={styles.scheduleBtn}>
                         <Text style={styles.scheduleText}>Schedule</Text>

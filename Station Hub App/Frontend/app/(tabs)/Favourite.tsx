@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons, MaterialIcons, FontAwesome } from "@expo/vector-icons";
+import { Ionicons, FontAwesome } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
@@ -24,6 +24,7 @@ type Service = {
   description?: string;
   rating?: number;
   image_url?: string;
+  tier?: string;
   tiers?: { base?: Tier; premium?: Tier };
 };
 
@@ -68,16 +69,18 @@ export default function Favorites() {
     }, [])
   );
 
-  const handleUnfavorite = async (serviceId: string) => {
-    setRemovingId(serviceId);
+  const handleUnfavorite = async (serviceId: string, tier: string) => {
+    setRemovingId(`${serviceId}_${tier}`);
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
-      await fetch(`${API_BASE}/favorites/${serviceId}`, {
+      await fetch(`${API_BASE}/favorites/${serviceId}/${tier}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      setServices((prev) => prev.filter((s) => s.id !== serviceId));
+      setServices((prev) =>
+        prev.filter((s) => !(s.id === serviceId && s.tier === tier))
+      );
     } catch (e) {
       // leave it in the list if the request failed
     } finally {
@@ -143,7 +146,7 @@ export default function Favorites() {
             contentContainerStyle={{ paddingBottom: 120 }}
           >
             {services.map((item) => (
-              <View key={item.id} style={styles.card}>
+              <View key={`${item.id}_${item.tier}`} style={styles.card}>
                 {item.image_url ? (
                   <Image source={{ uri: item.image_url }} style={styles.image} />
                 ) : (
@@ -155,6 +158,9 @@ export default function Favorites() {
 
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{item.name}</Text>
+                  <Text style={styles.tierLabel}>
+                    {item.tier === "premium" ? "Premium" : "Base"}
+                  </Text>
 
                   {item.rating ? (
                     <View style={styles.rating}>
@@ -165,10 +171,10 @@ export default function Favorites() {
                 </View>
 
                 <TouchableOpacity
-                  onPress={() => handleUnfavorite(item.id)}
-                  disabled={removingId === item.id}
+                  onPress={() => handleUnfavorite(item.id, item.tier!)}
+                  disabled={removingId === `${item.id}_${item.tier}`}
                 >
-                  {removingId === item.id ? (
+                  {removingId === `${item.id}_${item.tier}` ? (
                     <ActivityIndicator size="small" color="#ff7a00" />
                   ) : (
                     <Ionicons name="heart" size={22} color="#ff7a00" />
@@ -255,6 +261,13 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 15,
     fontWeight: "700",
+  },
+
+  tierLabel: {
+    color: "#FF7A00",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
   },
 
   rating: {
