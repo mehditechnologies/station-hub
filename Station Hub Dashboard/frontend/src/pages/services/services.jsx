@@ -202,13 +202,12 @@ const EmptyState = ({ onAdd, D }) => (
 // ── Service Form ───────────────────────────────────────────
 const EMPTY_FORM = {
   name: "",
-  price: "",
-  duration: "",
   description: "",
   status: "Active",
   rating: "",
   image_url: "",
-  station_ids: [], // ← new field
+  station_ids: [],
+  tiers: {}, // ← replaces price/duration. e.g. { base: { price, duration }, premium: { price, duration } }
 };
 /////////////////////////////////////////////////////////////////////////////////////////
 
@@ -341,40 +340,97 @@ const ServiceForm = ({
             </select>
           </div>
 
-          {/* Price */}
-          <div>
+          {/* Tier selection */}
+          <div className="col-span-3">
             <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-              Price (PKR)
+              Service Tiers <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <span
-                className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium ${D ? "text-gray-600" : "text-gray-400"}`}
-              >
-                PKR
-              </span>
-              <input
-                type="number"
-                value={form.price}
-                onChange={(e) => set("price", e.target.value)}
-                placeholder="2500"
-                className={`w-full pl-10 pr-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
-              />
+            <div className="flex items-center gap-4 mb-3">
+              {["base", "premium"].map((tier) => (
+                <label
+                  key={tier}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!form.tiers?.[tier]}
+                    onChange={(e) => {
+                      const tiers = { ...form.tiers };
+                      if (e.target.checked) {
+                        tiers[tier] = tiers[tier] || {
+                          price: "",
+                          duration: "",
+                        };
+                      } else {
+                        delete tiers[tier];
+                      }
+                      set("tiers", tiers);
+                    }}
+                    className="accent-orange-500"
+                  />
+                  <span className="text-sm capitalize">{tier}</span>
+                </label>
+              ))}
             </div>
           </div>
 
-          {/* Duration */}
-          <div>
-            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
-              Duration
-            </label>
-            <input
-              type="text"
-              value={form.duration}
-              onChange={(e) => set("duration", e.target.value)}
-              placeholder="e.g. 20–30 mins"
-              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
-            />
-          </div>
+          {/* Per-tier price/duration sections */}
+          {["base", "premium"].map((tier) =>
+            form.tiers?.[tier] ? (
+              <div
+                key={tier}
+                className={`col-span-3 grid grid-cols-2 gap-4 p-3 rounded-xl border ${D ? "border-[#2a2d3e] bg-[#0f1117]" : "border-gray-100 bg-gray-50"}`}
+              >
+                <p
+                  className={`col-span-2 text-xs font-semibold capitalize ${D ? "text-gray-300" : "text-gray-600"}`}
+                >
+                  {tier} pricing
+                </p>
+                <div>
+                  <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
+                    Price (PKR)
+                  </label>
+                  <div className="relative">
+                    <span
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium ${D ? "text-gray-600" : "text-gray-400"}`}
+                    >
+                      PKR
+                    </span>
+                    <input
+                      type="number"
+                      value={form.tiers[tier].price}
+                      onChange={(e) => {
+                        const tiers = { ...form.tiers };
+                        tiers[tier] = { ...tiers[tier], price: e.target.value };
+                        set("tiers", tiers);
+                      }}
+                      placeholder="2500"
+                      className={`w-full pl-10 pr-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
+                    Duration
+                  </label>
+                  <input
+                    type="text"
+                    value={form.tiers[tier].duration}
+                    onChange={(e) => {
+                      const tiers = { ...form.tiers };
+                      tiers[tier] = {
+                        ...tiers[tier],
+                        duration: e.target.value,
+                      };
+                      set("tiers", tiers);
+                    }}
+                    placeholder="e.g. 20–30 mins"
+                    className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
+                  />
+                </div>
+              </div>
+            ) : null,
+          )}
 
           {/* Description */}
           <div className="col-span-3">
@@ -561,23 +617,37 @@ const Services = () => {
 
   const validate = (form) => {
     if (!form.name.trim()) return "Service name is required";
-    if (!form.price) return "Price is required";
-    if (isNaN(Number(form.price)) || Number(form.price) < 0)
-      return "Enter a valid price";
-    if (!form.duration.trim()) return "Duration is required";
+    const tierKeys = Object.keys(form.tiers || {});
+    if (tierKeys.length === 0)
+      return "Select at least one tier (Base or Premium)";
+    for (const tier of tierKeys) {
+      const t = form.tiers[tier];
+      if (!t.price) return `Price is required for ${tier}`;
+      if (isNaN(Number(t.price)) || Number(t.price) < 0)
+        return `Enter a valid price for ${tier}`;
+      if (!t.duration?.trim()) return `Duration is required for ${tier}`;
+    }
     return null;
   };
 
-  const buildPayload = (form, imageUrl) => ({
-    name: form.name.trim(),
-    price: Number(form.price),
-    duration: form.duration.trim(),
-    description: form.description.trim(),
-    status: form.status,
-    rating: form.rating ? Number(form.rating) : null,
-    image_url: imageUrl,
-    station_ids: form.station_ids || [], // ← included in every save
-  });
+  const buildPayload = (form, imageUrl) => {
+    const tiers = {};
+    for (const tier of Object.keys(form.tiers || {})) {
+      tiers[tier] = {
+        price: Number(form.tiers[tier].price),
+        duration: form.tiers[tier].duration.trim(),
+      };
+    }
+    return {
+      name: form.name.trim(),
+      description: form.description.trim(),
+      status: form.status,
+      rating: form.rating ? Number(form.rating) : null,
+      image_url: imageUrl,
+      station_ids: form.station_ids || [],
+      tiers,
+    };
+  };
 
   // Creates / removes serviceStationStatus docs when a service is saved
   const syncStationStatus = async (
@@ -775,13 +845,12 @@ const Services = () => {
               title={`Edit — ${svc.name}`}
               initial={{
                 name: svc.name || "",
-                price: svc.price || "",
-                duration: svc.duration || "",
                 description: svc.description || "",
                 status: svc.status || "Active",
                 rating: svc.rating || "",
                 image_url: svc.image_url || "",
-                station_ids: svc.station_ids || [], // ← pre-filled on edit
+                station_ids: svc.station_ids || [],
+                tiers: svc.tiers || {},
               }}
               onSave={handleEdit}
               onCancel={() => {
@@ -891,19 +960,35 @@ const Services = () => {
                   </span>
                 </div>
 
-                <div
-                  className={`flex items-center gap-3 text-xs mb-2 ${D ? "text-gray-400" : "text-gray-500"}`}
-                >
-                  <span className="font-semibold text-orange-500">
-                    PKR {Number(svc.price).toLocaleString()}
-                  </span>
-                  <span className={D ? "text-gray-600" : "text-gray-200"}>
-                    |
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <IconClock /> {svc.duration}
-                  </span>
-                </div>
+                {Object.keys(svc.tiers || {}).length > 0 && (
+                  <div className="space-y-1 mb-2">
+                    {["base", "premium"].map((tier) =>
+                      svc.tiers?.[tier] ? (
+                        <div
+                          key={tier}
+                          className={`flex items-center gap-3 text-xs ${D ? "text-gray-400" : "text-gray-500"}`}
+                        >
+                          <span
+                            className={`font-medium capitalize ${D ? "text-gray-300" : "text-gray-600"}`}
+                          >
+                            {tier}:
+                          </span>
+                          <span className="font-semibold text-orange-500">
+                            PKR {Number(svc.tiers[tier].price).toLocaleString()}
+                          </span>
+                          <span
+                            className={D ? "text-gray-600" : "text-gray-200"}
+                          >
+                            |
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <IconClock /> {svc.tiers[tier].duration}
+                          </span>
+                        </div>
+                      ) : null,
+                    )}
+                  </div>
+                )}
 
                 {svc.rating && (
                   <div

@@ -19,7 +19,7 @@ import * as AuthSession from "expo-auth-session";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const API_BASE = "http://192.168.18.87:8000";
+const API_BASE = "http://192.168.18.95:8000";
 
 export default function Login() {
   const router = useRouter();
