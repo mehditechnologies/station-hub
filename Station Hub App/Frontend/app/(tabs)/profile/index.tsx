@@ -12,6 +12,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Bottomnav from "@/components/Bottomnav";
+
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -45,10 +47,10 @@ export default function ProfileScreen() {
                   : require("../../../assets/images/johndoe.png")
               }
               style={styles.avatar}
-            />
+              />
             <Text style={styles.name}>{user.full_name}</Text>
             <Text style={styles.email}>{user.email}</Text>
-          </View>
+            </View>
         </LinearGradient>
 
         {/* MENU ITEMS */}
@@ -108,6 +110,7 @@ export default function ProfileScreen() {
 
         </View>
       </ScrollView>
+        <Bottomnav />
     </SafeAreaView>
   );
 }
@@ -191,3 +194,4 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 });
+

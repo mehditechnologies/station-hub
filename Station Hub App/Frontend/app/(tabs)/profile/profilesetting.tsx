@@ -39,15 +39,15 @@ export default function ProfileSettingsScreen() {
     },
   ];
 
-  const settingsItems = [
-    {
-      id: 1,
-      title: "Settings",
-      subtitle: "App preferences",
-      icon: <Feather name="settings" size={20} color="#FF7A45" />,
-      route: "/(tabs)/profile",
-    },
-  ];
+  // const settingsItems = [
+  //   {
+  //     id: 1,
+  //     title: "Settings",
+  //     subtitle: "App preferences",
+  //     icon: <Feather name="settings" size={20} color="#FF7A45" />,
+  //     route: "/(tabs)/profilesetting",
+  //   },
+  // ];
 
   /* ================= RENDER ITEM (FIXED) ================= */
 
@@ -126,28 +126,22 @@ export default function ProfileSettingsScreen() {
               </Text>
             </View>
           </View>
-
-          <Ionicons
-            name="chevron-forward"
-            size={22}
-            color="#9CA3AF"
-          />
         </TouchableOpacity>
 
         {/* GENERAL */}
-        <Text style={styles.sectionTitle}>
+        {/* <Text style={styles.sectionTitle}>
           General
         </Text>
-        {generalItems.map(renderItem)}
+        {generalItems.map(renderItem)} */}
 
         {/* SETTINGS */}
-        <Text style={styles.sectionTitle}>
+        {/* <Text style={styles.sectionTitle}>
           Settings
         </Text>
-        {settingsItems.map(renderItem)}
+        {settingsItems.map(renderItem)} */}
 
         {/* LOGOUT */}
-        <TouchableOpacity style={styles.logoutCard}>
+        {/* <TouchableOpacity style={styles.logoutCard}>
           <View style={styles.logoutLeft}>
             <MaterialIcons
               name="logout"
@@ -170,7 +164,7 @@ export default function ProfileSettingsScreen() {
             size={20}
             color="#9CA3AF"
           />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </ScrollView>
 
       <Bottomnav />
@@ -302,3 +296,5 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
 });
+
+
