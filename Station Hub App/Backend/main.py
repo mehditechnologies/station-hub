@@ -6,7 +6,8 @@ from routes import stations
 from routes import bookings
 from routes import settings
 from routes import dashboard
-from routes import services 
+from routes import services
+from routes import favorites
 
 app = FastAPI()
 
@@ -26,6 +27,7 @@ app.include_router(bookings.router)
 app.include_router(settings.router)
 app.include_router(dashboard.router)
 app.include_router(services.router) 
+app.include_router(favorites.router) 
 
 
 @app.get("/")
