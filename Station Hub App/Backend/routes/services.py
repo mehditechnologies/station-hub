@@ -24,3 +24,7 @@ async def update_service(service_id: str, body: ServiceRequest, current_user: di
 @router.delete("/{service_id}")
 async def delete_service(service_id: str, current_user: dict = Depends(get_current_user)):
     return await service_service.delete_service(service_id, current_user["sub"])
+
+@router.get("/public")
+async def get_public_services():
+    return await service_service.get_public_services()

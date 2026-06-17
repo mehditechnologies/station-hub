@@ -41,3 +41,9 @@ async def delete_service(service_id: str, user_id: str) -> dict:
         raise HTTPException(status_code=403, detail="Access denied")
     doc_ref.delete()
     return {"message": "Service deleted"}
+
+async def get_public_services() -> dict:
+    docs = db.collection("services").where("status", "==", "Active").stream()
+    services = [{"id": d.id, **d.to_dict()} for d in docs]
+    services.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return {"services": services}

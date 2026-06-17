@@ -76,37 +76,37 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="profile/manageprofile"
         options={{
           title: "Manage Profile",
           href: null,
         }}
-      />
+      /> */}
 
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="profile/bookinghistory"
         options={{
           title: "Booking History",
           href: null,
         }}
-      />
+      /> */}
 
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="profile/profilesetting"
         options={{
           title: "Profile Settings",
           href: null,
         }}
-      />
+      /> */}
 
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="profile/logout"
         options={{
           title: "Logout",
           href: null,
         }}
-      />
+      /> */}
 
       <Tabs.Screen
         name="Favourite"
