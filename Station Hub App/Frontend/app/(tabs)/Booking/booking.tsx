@@ -10,13 +10,24 @@ import {
   TextInput,
 } from "react-native";
 
-import { useRouter } from "expo-router";
+// import { useRouter } from "expo-router";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import Bottomnav from "@/components/Bottomnav";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 export default function BookingScreen() {
   const router = useRouter();
+
+  const params = useLocalSearchParams<{
+    service_id?: string;
+    tier?: string;
+    name?: string;
+    price?: string;
+    duration?: string;
+  }>();
+
+  const hasSelectedService = !!params.service_id;
 
   const [selectedService, setSelectedService] = useState("Full Service");
   const [selectedDate, setSelectedDate] = useState("11");
@@ -43,156 +54,190 @@ export default function BookingScreen() {
 
   return (
     <LinearGradient
-      colors={["#fffdfb", "#fff6f0", "#ffe8d8"]}   // ✅ FAVORITES BACKGROUND
+      colors={["#fffdfb", "#fff6f0", "#ffe8d8"]} // ✅ FAVORITES BACKGROUND
       style={styles.container}
     >
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-
-          {/* HEADER */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color="#000" />
-            </TouchableOpacity>
-
-            <Text style={styles.headerTitle}>Book Your Wash</Text>
-
-            <Image
-              source={require("../../../assets/images/johndoe.png")}
-              style={styles.profileImage}
-            />
-          </View>
-
-          {/* SHOP CARD */}
-          <View style={styles.card}>
-            <Image
-              source={require("../../../assets/images/riverside.png")}
-              style={styles.image}
-            />
-
-            <Text style={styles.shopName}>Riverside Detailing</Text>
-            <Text style={styles.location}>
-              📍 Downtown • 1.8 km away
+        {!hasSelectedService ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={48} color="#FF7A00" />
+            <Text style={styles.emptyTitle}>No service selected</Text>
+            <Text style={styles.emptySubtitle}>
+              Go to the Services page and select a service to book.
             </Text>
+            <TouchableOpacity
+              style={styles.emptyBtn}
+              onPress={() => router.push("/(tabs)/service/base")}
+            >
+              <Text style={styles.emptyBtnText}>Browse Services</Text>
+            </TouchableOpacity>
           </View>
+        ) : (
+          <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+            {/* HEADER */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Ionicons name="arrow-back" size={24} color="#000" />
+              </TouchableOpacity>
 
-          {/* SERVICES */}
-          <Text style={styles.sectionTitle}>Select Service</Text>
+              <Text style={styles.headerTitle}>Book Your Wash</Text>
 
-          <View style={styles.serviceContainer}>
-            {services.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.serviceCard,
-                  selectedService === item.title && styles.activeService,
-                ]}
-                onPress={() => setSelectedService(item.title)}
-              >
-                <FontAwesome5
-                  name={item.icon}
-                  size={18}
-                  color={selectedService === item.title ? "#fff" : "#ff8c00"}
-                />
-                <Text
+              <Image
+                source={require("../../../assets/images/johndoe.png")}
+                style={styles.profileImage}
+              />
+            </View>
+
+            {/* SHOP CARD */}
+            <View style={styles.card}>
+              <Image
+                source={require("../../../assets/images/riverside.png")}
+                style={styles.image}
+              />
+
+              <Text style={styles.shopName}>Riverside Detailing</Text>
+              <Text style={styles.location}>📍 Downtown • 1.8 km away</Text>
+            </View>
+
+            {/* SERVICES */}
+            <Text style={styles.sectionTitle}>Select Service</Text>
+
+            <View style={styles.serviceContainer}>
+              {services.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
                   style={[
-                    styles.serviceText,
-                    selectedService === item.title && { color: "#fff" },
+                    styles.serviceCard,
+                    selectedService === item.title && styles.activeService,
                   ]}
+                  onPress={() => setSelectedService(item.title)}
                 >
-                  {item.title}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <FontAwesome5
+                    name={item.icon}
+                    size={18}
+                    color={selectedService === item.title ? "#fff" : "#ff8c00"}
+                  />
+                  <Text
+                    style={[
+                      styles.serviceText,
+                      selectedService === item.title && { color: "#fff" },
+                    ]}
+                  >
+                    {item.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-          {/* DATE */}
-          <Text style={styles.sectionTitle}>Select Date</Text>
+            {/* DATE */}
+            <Text style={styles.sectionTitle}>Select Date</Text>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {dates.map((item) => (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {dates.map((item) => (
+                <TouchableOpacity
+                  key={item.num}
+                  style={[
+                    styles.dateCard,
+                    selectedDate === item.num && styles.activeDate,
+                  ]}
+                  onPress={() => setSelectedDate(item.num)}
+                >
+                  <Text
+                    style={{
+                      color: selectedDate === item.num ? "#fff" : "#000",
+                    }}
+                  >
+                    {item.day}
+                  </Text>
+                  <Text
+                    style={{
+                      color: selectedDate === item.num ? "#fff" : "#000",
+                    }}
+                  >
+                    {item.num}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* TIME */}
+            <Text style={styles.sectionTitle}>Select Time</Text>
+
+            <View style={styles.timeContainer}>
+              {times.map((time) => (
+                <TouchableOpacity
+                  key={time}
+                  style={[
+                    styles.timeBtn,
+                    selectedTime === time && styles.activeTime,
+                  ]}
+                  onPress={() => setSelectedTime(time)}
+                >
+                  <Text
+                    style={{ color: selectedTime === time ? "#fff" : "#000" }}
+                  >
+                    {time}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* VEHICLE */}
+            <Text style={styles.sectionTitle}>Vehicle Type</Text>
+
+            <View style={styles.vehicleTabs}>
               <TouchableOpacity
-                key={item.num}
                 style={[
-                  styles.dateCard,
-                  selectedDate === item.num && styles.activeDate,
+                  styles.vehicleTab,
+                  vehicleType === "Car" && styles.activeVehicleTab,
                 ]}
-                onPress={() => setSelectedDate(item.num)}
+                onPress={() => setVehicleType("Car")}
               >
-                <Text style={{ color: selectedDate === item.num ? "#fff" : "#000" }}>
-                  {item.day}
-                </Text>
-                <Text style={{ color: selectedDate === item.num ? "#fff" : "#000" }}>
-                  {item.num}
+                <Text
+                  style={
+                    vehicleType === "Car"
+                      ? styles.activeVehicleText
+                      : styles.vehicleText
+                  }
+                >
+                  Car
                 </Text>
               </TouchableOpacity>
-            ))}
+
+              <TouchableOpacity
+                style={[
+                  styles.vehicleTab,
+                  vehicleType === "Motorbike" && styles.activeVehicleTab,
+                ]}
+                onPress={() => setVehicleType("Motorbike")}
+              >
+                <Text
+                  style={
+                    vehicleType === "Motorbike"
+                      ? styles.activeVehicleText
+                      : styles.vehicleText
+                  }
+                >
+                  Motorbike
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* INPUTS */}
+            <View style={styles.inputRow}>
+              <TextInput placeholder="Vehicle Brand" style={styles.input} />
+              <TextInput placeholder="Vehicle Number" style={styles.input} />
+            </View>
+
+            {/* CONFIRM */}
+            <TouchableOpacity
+              style={styles.confirmBtn}
+              onPress={() => router.push("/(tabs)/Booking/bookingconfirm")}
+            >
+              <Text style={styles.confirmText}>Confirm Booking</Text>
+            </TouchableOpacity>
           </ScrollView>
-
-          {/* TIME */}
-          <Text style={styles.sectionTitle}>Select Time</Text>
-
-          <View style={styles.timeContainer}>
-            {times.map((time) => (
-              <TouchableOpacity
-                key={time}
-                style={[
-                  styles.timeBtn,
-                  selectedTime === time && styles.activeTime,
-                ]}
-                onPress={() => setSelectedTime(time)}
-              >
-                <Text style={{ color: selectedTime === time ? "#fff" : "#000" }}>
-                  {time}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* VEHICLE */}
-          <Text style={styles.sectionTitle}>Vehicle Type</Text>
-
-          <View style={styles.vehicleTabs}>
-            <TouchableOpacity
-              style={[
-                styles.vehicleTab,
-                vehicleType === "Car" && styles.activeVehicleTab,
-              ]}
-              onPress={() => setVehicleType("Car")}
-            >
-              <Text style={vehicleType === "Car" ? styles.activeVehicleText : styles.vehicleText}>
-                Car
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.vehicleTab,
-                vehicleType === "Motorbike" && styles.activeVehicleTab,
-              ]}
-              onPress={() => setVehicleType("Motorbike")}
-            >
-              <Text style={vehicleType === "Motorbike" ? styles.activeVehicleText : styles.vehicleText}>
-                Motorbike
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* INPUTS */}
-          <View style={styles.inputRow}>
-            <TextInput placeholder="Vehicle Brand" style={styles.input} />
-            <TextInput placeholder="Vehicle Number" style={styles.input} />
-          </View>
-
-          {/* CONFIRM */}
-          <TouchableOpacity
-            style={styles.confirmBtn}
-            onPress={() => router.push("/(tabs)/Booking/bookingconfirm")}
-          >
-            <Text style={styles.confirmText}>Confirm Booking</Text>
-          </TouchableOpacity>
-
-        </ScrollView>
+        )}
 
         <Bottomnav />
       </SafeAreaView>
@@ -328,6 +373,40 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     alignItems: "center",
+  },
+
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 30,
+  },
+
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 16,
+    color: "#000",
+  },
+
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginTop: 8,
+  },
+
+  emptyBtn: {
+    backgroundColor: "#FF7A00",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 20,
+  },
+
+  emptyBtnText: {
+    color: "#fff",
+    fontWeight: "700",
   },
 
   confirmText: { color: "#fff", fontWeight: "700" },

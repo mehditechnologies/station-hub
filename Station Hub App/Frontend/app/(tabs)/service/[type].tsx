@@ -13,8 +13,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
+import { API_BASE } from "../../../src/config"; // adjust relative path as needed
 
-const API_BASE = "http://192.168.18.95:8000";
+// const API_BASE = "http://192.168.18.95:8000";
 
 type Tier = { price: number; duration: string };
 type Service = {
@@ -259,7 +260,21 @@ export default function ServicesScreen() {
                       PKR {Number(tier.price).toLocaleString()}
                     </Text>
                     <View style={styles.btnRow}>
-                      <TouchableOpacity style={styles.scheduleBtn}>
+                      <TouchableOpacity
+                        style={styles.scheduleBtn}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/(tabs)/Booking/booking",
+                            params: {
+                              service_id: service.id,
+                              tier: tierKey,
+                              name: service.name,
+                              price: String(tier.price),
+                              duration: tier.duration,
+                            },
+                          })
+                        }
+                      >
                         <Text style={styles.scheduleText}>Schedule</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.viewBtn}>

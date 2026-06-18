@@ -13,6 +13,22 @@ import {
 } from "firebase/firestore";
 import { db } from "../../firebase";
 
+const CLOUDINARY_CLOUD_NAME = "dqlmva24c";
+const CLOUDINARY_UPLOAD_PRESET = "StationHub";
+
+async function uploadToCloudinary(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    { method: "POST", body: formData },
+  );
+  if (!res.ok) throw new Error("Image upload failed");
+  const data = await res.json();
+  return data.secure_url;
+}
+
 // ── SVG Icons ──────────────────────────────────────────────
 const IconPlus = () => (
   <svg
@@ -242,6 +258,7 @@ const EMPTY_FORM = {
   description: "",
   latitude: "",
   longitude: "",
+  image_url: "",
 };
 
 const ALL_TIMES = [
@@ -287,6 +304,8 @@ const StationForm = ({
   D,
 }) => {
   const [form, setForm] = useState(initial);
+  const [imageFile, setImageFile] = useState(null); // ← add
+  const [imagePreview, setImagePreview] = useState(initial.image_url || "");
   const [locMsg, setLocMsg] = useState("");
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [newCategory, setNewCategory] = useState("");
@@ -538,6 +557,91 @@ const StationForm = ({
               className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all resize-none ${inp}`}
             />
           </div>
+          {/* Station Image */}
+          <div className="col-span-3">
+            <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>
+              Station Image (optional)
+            </label>
+            <div
+              className={`w-full border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
+                D
+                  ? "border-[#2a2d3e] hover:border-orange-500/50 bg-[#0f1117]"
+                  : "border-gray-200 hover:border-orange-300 bg-gray-50"
+              }`}
+              onClick={() =>
+                document.getElementById("station-image-input").click()
+              }
+            >
+              {imagePreview ? (
+                <div className="relative w-full">
+                  <img
+                    src={imagePreview}
+                    alt="preview"
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImageFile(null);
+                      setImagePreview("");
+                      set("image_url", "");
+                    }}
+                    className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${D ? "bg-orange-500/20" : "bg-orange-50"}`}
+                  >
+                    <svg
+                      className="w-5 h-5 text-orange-400"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <p
+                    className={`text-xs font-medium ${D ? "text-gray-400" : "text-gray-500"}`}
+                  >
+                    Click to upload image
+                  </p>
+                  <p
+                    className={`text-[11px] ${D ? "text-gray-600" : "text-gray-400"}`}
+                  >
+                    PNG, JPG up to 2MB
+                  </p>
+                </>
+              )}
+            </div>
+            <input
+              id="station-image-input"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 2 * 1024 * 1024) {
+                  alert("Image must be under 2MB");
+                  return;
+                }
+                setImageFile(file);
+                const reader = new FileReader();
+                reader.onload = () => setImagePreview(reader.result);
+                reader.readAsDataURL(file);
+              }}
+            />
+          </div>
         </div>
 
         {/* ── Section 2: Working Hours ── */}
@@ -662,7 +766,7 @@ const StationForm = ({
             Cancel
           </button>
           <button
-            onClick={() => onSave(form)}
+            onClick={() => onSave(form, imageFile)}
             disabled={saving}
             className="px-5 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-colors shadow-sm disabled:opacity-60 flex items-center gap-1.5 cursor-pointer"
           >
@@ -867,7 +971,7 @@ const Stations = () => {
   };
 
   // ── Add ────────────────────────────────────────────────
-  const handleAdd = async (form) => {
+  const handleAdd = async (form, imageFile) => {
     const err = validate(form);
     if (err) {
       setFormError(err);
@@ -876,22 +980,24 @@ const Stations = () => {
     setSaving(true);
     setFormError("");
     try {
-      console.log("Trying to save:", form); // ← add this
       const token = localStorage.getItem("token");
       if (!token) {
-        setFormError("You are not logged in. Please log in and try again.");
+        setFormError("You are not logged in.");
         return;
       }
       const payload = JSON.parse(atob(token.split(".")[1]));
+
+      let image_url = form.image_url || "";
+      if (imageFile) image_url = await uploadToCloudinary(imageFile); // ← add
+
       const docRef = await addDoc(collection(db, "stations"), {
         ...form,
+        image_url, // ← add
         owner_id: payload.sub,
         created_at: new Date().toISOString(),
       });
-      console.log("Saved with ID:", docRef.id);
       setIsAdding(false);
     } catch (e) {
-      console.error("Save error:", e); // ← add this
       setFormError(e.message || "Failed to add station");
     } finally {
       setSaving(false);
@@ -899,7 +1005,7 @@ const Stations = () => {
   };
 
   // ── Edit ───────────────────────────────────────────────
-  const handleEdit = async (form) => {
+  const handleEdit = async (form, imageFile) => {
     const err = validate(form);
     if (err) {
       setFormError(err);
@@ -908,7 +1014,10 @@ const Stations = () => {
     setSaving(true);
     setFormError("");
     try {
-      await updateDoc(doc(db, "stations", editingId), { ...form });
+      let image_url = form.image_url || "";
+      if (imageFile) image_url = await uploadToCloudinary(imageFile); // ← add
+
+      await updateDoc(doc(db, "stations", editingId), { ...form, image_url }); // ← image_url
       setEditingId(null);
     } catch (e) {
       setFormError(e.message || "Failed to update station");
@@ -1017,6 +1126,7 @@ const Stations = () => {
                 description: stn.description || "",
                 latitude: stn.latitude || "",
                 longitude: stn.longitude || "",
+                image_url: stn.image_url || "", // ← add
               }}
               onSave={handleEdit}
               onCancel={() => {
@@ -1041,37 +1151,67 @@ const Stations = () => {
             key={stn.id}
             className={`border rounded-2xl shadow-sm overflow-hidden flex flex-col transition-colors ${D ? "bg-[#1a1d27] border-[#2a2d3e]" : "bg-white border-gray-100"}`}
           >
-            {/* Card Top — colored band */}
-            <div
-              className={`h-13 flex items-center justify-center relative ${D ? "bg-orange-500/10" : "bg-gradient-to-br from-orange-50 to-orange-100"}`}
-            >
-              {/* <IconStation /> */}
-              {/* City pill */}
-              {stn.city && (
-                <span
-                  className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${D ? "bg-[#1a1d27] text-gray-300" : "bg-white text-gray-600"} shadow-sm`}
-                >
-                  {stn.city}
-                </span>
-              )}
-              {/* Status badge */}
-              <span
-                className={`absolute top-3 right-3 text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                  stn.status === "Active"
-                    ? D
-                      ? "bg-green-500/20 text-green-400"
-                      : "bg-green-50 text-green-600"
-                    : D
-                      ? "bg-yellow-500/20 text-yellow-400"
-                      : "bg-yellow-50 text-yellow-600"
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${stn.status === "Active" ? "bg-green-500" : "bg-yellow-500"}`}
+            {/* Card Top — image or colored band */}
+            {stn.image_url ? (
+              <div className="relative">
+                <img
+                  src={stn.image_url}
+                  alt={stn.name}
+                  className="h-46 w-full object-cover"
                 />
-                {stn.status}
-              </span>
-            </div>
+                {stn.city && (
+                  <span
+                    className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${D ? "bg-[#1a1d27] text-gray-300" : "bg-white text-gray-600"} shadow-sm`}
+                  >
+                    {stn.city}
+                  </span>
+                )}
+                <span
+                  className={`absolute top-3 right-3 text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                    stn.status === "Active"
+                      ? D
+                        ? "bg-green-500/20 text-green-400"
+                        : "bg-green-50 text-green-600"
+                      : D
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : "bg-yellow-50 text-yellow-600"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${stn.status === "Active" ? "bg-green-500" : "bg-yellow-500"}`}
+                  />
+                  {stn.status}
+                </span>
+              </div>
+            ) : (
+              <div
+                className={`h-13 flex items-center justify-center relative ${D ? "bg-orange-500/10" : "bg-gradient-to-br from-orange-50 to-orange-100"}`}
+              >
+                {stn.city && (
+                  <span
+                    className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${D ? "bg-[#1a1d27] text-gray-300" : "bg-white text-gray-600"} shadow-sm`}
+                  >
+                    {stn.city}
+                  </span>
+                )}
+                <span
+                  className={`absolute top-3 right-3 text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                    stn.status === "Active"
+                      ? D
+                        ? "bg-green-500/20 text-green-400"
+                        : "bg-green-50 text-green-600"
+                      : D
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : "bg-yellow-50 text-yellow-600"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${stn.status === "Active" ? "bg-green-500" : "bg-yellow-500"}`}
+                  />
+                  {stn.status}
+                </span>
+              </div>
+            )}
 
             {/* Card Body */}
             <div className="p-4 flex flex-col flex-1">
