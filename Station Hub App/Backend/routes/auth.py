@@ -8,6 +8,7 @@ from schemas.auth_schemas import (
     VerifyOTPRequest,
     ResetPasswordRequest,
     ChangePasswordRequest,
+    UpdateProfileRequest,
 )
 import services.auth_service as auth_service
 
@@ -43,6 +44,15 @@ async def reset_password(body: ResetPasswordRequest):
 @router.post("/change-password")
 async def change_password(body: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
     return await auth_service.change_password(body, current_user["sub"])
+
+@router.get("/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    return await auth_service.get_current_user_profile(current_user["sub"])
+
+
+@router.put("/me")
+async def update_me(body: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
+    return await auth_service.update_current_user_profile(body, current_user["sub"])
 
 
 @router.post("/google")

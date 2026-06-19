@@ -1,160 +1,291 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
+  StyleSheet,
   SafeAreaView,
   ScrollView,
-  Image,
   TouchableOpacity,
-  StyleSheet,
+  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  Ionicons,
+  MaterialIcons,
+  Feather,
+} from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
+import { useUser } from '../../../context/userContext';
 
 
-export default function ProfileScreen() {
+export default function ProfileSettingsScreen() {
   const router = useRouter();
-  const [user, setUser] = useState({ full_name: "User", email: "", profile_image: "" });
+  const { user, loading } = useUser();
+  
+  /* ================= DATA ================= */
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const stored = await AsyncStorage.getItem("user");
-      if (stored) setUser(JSON.parse(stored));
-    };
-    loadUser();
-  }, []);
+  const generalItems = [
+    {
+  id: 1,
+  title: "Manage your profile",
+  subtitle: "Change profile picture, name, number & mail",
+  icon: <Feather name="user" size={20} color="#FF7A45" />,
+  route: "/(tabs)/profile/manageprofile",
+},
+    {
+      id: 2,
+      title: "Booking History",
+      subtitle: "View past bookings",
+      icon: <Feather name="clock" size={20} color="#FF7A45" />,
+      route: "/(tabs)/profile/bookinghistory",
+    },
+  ];
+
+  const settingsItems = [
+    {
+      id: 1,
+      title: "Settings",
+      subtitle: "App preferences",
+      icon: <Feather name="settings" size={20} color="#FF7A45" />,
+      route: "/(tabs)/profile/profilesetting",
+    },
+  ];
+
+  /* ================= RENDER ITEM (FIXED) ================= */
+
+  const renderItem = (item: any) => {
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={styles.itemCard}
+        activeOpacity={0.8}
+        onPress={() => router.push(item.route)}
+      >
+        <View style={styles.iconContainer}>
+          {item.icon}
+        </View>
+
+        <View style={styles.textContainer}>
+          <Text style={styles.itemTitle}>
+            {item.title}
+          </Text>
+          <Text style={styles.itemSubtitle}>
+            {item.subtitle}
+          </Text>
+        </View>
+
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color="#9CA3AF"
+        />
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.safeArea}>
+      {/* GRADIENT */}
+      <LinearGradient
+        colors={["#FFE4DA", "#FFF5F0", "#FFFFFF"]}
+        style={styles.gradient}
+      />
 
-        {/* GRADIENT BACKGROUND */}
-        <LinearGradient
-          colors={["#FF7A45", "#FF9366"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
-        >
-          {/* PROFILE CARD */}
-          <View style={styles.profileCard}>
-            <Image
-              source={
-                user.profile_image
-                  ? { uri: user.profile_image }
-                  : require("../../../assets/images/johndoe.png")
-              }
-              style={styles.avatar}
-              />
-            <Text style={styles.name}>{user.full_name}</Text>
-            <Text style={styles.email}>{user.email}</Text>
-            </View>
-        </LinearGradient>
-
-        {/* MENU ITEMS */}
-        <View style={styles.menuContainer}>
-
-          {/* MANAGE PROFILE */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push("/(tabs)/profile/manageprofile")}
-          >
-            <Ionicons name="person-outline" size={20} color="#FF7A45" />
-            <View style={styles.menuText}>
-              <Text style={styles.menuTitle}>Manage Profile</Text>
-              <Text style={styles.menuSubtitle}>Update your info</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        {/* HEADER */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color="#1A1A1A"
+            />
           </TouchableOpacity>
 
-          {/* BOOKING HISTORY */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push("/(tabs)/profile/bookinghistory")}
-          >
-            <Ionicons name="time-outline" size={20} color="#FF7A45" />
-            <View style={styles.menuText}>
-              <Text style={styles.menuTitle}>Booking History</Text>
-              <Text style={styles.menuSubtitle}>View past bookings</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>
+            Profile Settings
+          </Text>
 
-          {/* SETTINGS */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push("/(tabs)/profile/profilesetting")}
-          >
-            <Ionicons name="settings-outline" size={20} color="#FF7A45" />
-            <View style={styles.menuText}>
-              <Text style={styles.menuTitle}>Settings</Text>
-              <Text style={styles.menuSubtitle}>App preferences</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-
-          {/* LOGOUT */}
-          <TouchableOpacity
-            style={[styles.menuItem, styles.logoutItem]}
-            onPress={() => router.push("/(tabs)/profile/logout")}
-          >
-            <Ionicons name="log-out-outline" size={20} color="#FF0000" />
-            <View style={styles.menuText}>
-              <Text style={[styles.menuTitle, { color: "#FF0000" }]}>Logout</Text>
-              <Text style={styles.menuSubtitle}>Sign out of your account</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-
+          <View style={{ width: 24 }} />
         </View>
+
+        {/* PROFILE CARD */}
+        <TouchableOpacity style={styles.profileCard}>
+          <View style={styles.profileLeft}>
+            <Image
+              source={{ uri: user?.profile_image }}
+              style={styles.avatar}
+            />
+
+            <View>
+              <Text style={styles.profileName}>
+                {user?.full_name}
+              </Text>
+              <Text style={styles.profileEmail}>
+                {user?.email}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* GENERAL */}
+        <Text style={styles.sectionTitle}>
+          General
+        </Text>
+        {generalItems.map(renderItem)}
+
+        {/* SETTINGS */}
+        {/* <Text style={styles.sectionTitle}>
+          Settings
+        </Text>
+        {settingsItems.map(renderItem)} */}
+
+        {/* LOGOUT */}
+        <TouchableOpacity
+                    style={[styles.menuItem, styles.logoutItem]}
+                    onPress={() => router.push("/(tabs)/profile/logout")}
+                  >
+                    <Ionicons name="log-out-outline" size={20} color="#FF0000" />
+                    <View style={styles.menuText}>
+                      <Text style={[styles.menuTitle, { color: "#FF0000" }]}>Logout</Text>
+                      <Text style={styles.menuSubtitle}>Sign out of your account</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#999" />
+                  </TouchableOpacity>
       </ScrollView>
-        <Bottomnav />
+
+      <Bottomnav />
     </SafeAreaView>
   );
 }
 
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: "#FAFAFA",
   },
 
+  gradient: {
+    position: "absolute",
+    top: 0,
+    width: "100%",
+    height: 220,
+  },
+
   header: {
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 18,
+    alignItems: "center",
+  },
+
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
   },
 
   profileCard: {
+    backgroundColor: "#fff",
+    margin: 16,
+    padding: 16,
+    borderRadius: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  profileLeft: {
+    flexDirection: "row",
     alignItems: "center",
   },
 
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: "#fff",
+    width: 55,
+    height: 55,
+    borderRadius: 28,
+    marginRight: 12,
   },
 
-  name: {
-    fontSize: 24,
+  profileName: {
     fontWeight: "700",
-    color: "#fff",
-    marginTop: 15,
+    fontSize: 16,
   },
 
-  email: {
-    fontSize: 14,
-    color: "#fff",
-    marginTop: 5,
+  profileEmail: {
+    color: "#6B7280",
+    fontSize: 13,
   },
 
-  menuContainer: {
+  sectionTitle: {
+    marginHorizontal: 18,
+    marginTop: 10,
+    marginBottom: 10,
+    color: "#9CA3AF",
+    fontWeight: "600",
+  },
+
+  itemCard: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
     padding: 16,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  iconContainer: {
+    width: 40,
+    height: 40,
+    backgroundColor: "#FFF1EB",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  textContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  itemTitle: {
+    fontWeight: "600",
+  },
+
+  itemSubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+
+  logoutCard: {
+    backgroundColor: "#fff",
+    margin: 16,
+    padding: 16,
+    borderRadius: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  logoutLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  logoutTitle: {
+    color: "#EF4444",
+    fontWeight: "700",
+  },
+
+  logoutItem: {
+    marginTop: 20,
+    marginHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#ffcccc",
   },
 
   menuItem: {
@@ -171,10 +302,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  logoutItem: {
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: "#ffcccc",
+  logoutSubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
   },
 
   menuText: {
@@ -194,4 +324,5 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 });
+
 

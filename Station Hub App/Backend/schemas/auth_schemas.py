@@ -36,3 +36,9 @@ class ResetPasswordRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
+
+
+class UpdateProfileRequest(BaseModel):
+    full_name: str
+    phone: str | None = None
+    profile_image: str | None = None

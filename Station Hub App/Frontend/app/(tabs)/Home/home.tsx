@@ -15,9 +15,11 @@ import Bottomnav from "@/components/Bottomnav";
 
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+import { useUser } from '../../../context/userContext';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user, loading } = useUser();
 
   const [stations, setStations] = useState<any[]>([]);
   const [loadingStations, setLoadingStations] = useState(true);
@@ -72,12 +74,12 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.userSection}>
             <Image
-              source={require("../../../assets/images/johndoe.png")}
+              source={{ uri: user?.profile_image }}
               style={styles.profile}
             />
 
             <View>
-              <Text style={styles.name}>John Doe</Text>
+              <Text style={styles.name}>{user?.full_name}</Text>
 
               <View style={styles.location}>
                 <Ionicons name="location-sharp" size={15} color="#FF7A45" />

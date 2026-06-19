@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,18 +9,57 @@ import {
   TextInput,
   Image,
   Alert,
+  ActivityIndicator,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import Bottomnav from "@/components/Bottomnav";
+import { useUser } from "../../../context/userContext";
+import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+
+const CLOUDINARY_CLOUD_NAME = "dqlmva24c";
+const CLOUDINARY_UPLOAD_PRESET = "StationHub";
+
+async function uploadToCloudinary(uri: string) {
+  const formData = new FormData();
+  formData.append("file", {
+    uri,
+    type: "image/jpeg",
+    name: "profile.jpg",
+  } as any);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    { method: "POST", body: formData }
+  );
+  if (!res.ok) throw new Error("Image upload failed");
+  const data = await res.json();
+  return data.secure_url;
+}
 
 export default function ManageProfileScreen() {
-  const [name, setName] = useState("John Doe");
+  const router = useRouter();
+  const { user, loading: userLoading, updateUser } = useUser();
+
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
- const [image, setImage] = useState<string | null>(null);
+  const [image, setImage] = useState<string | null>(null);
   const [focusedInput, setFocusedInput] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.full_name || "");
+      setPhone(user.phone || "");
+      setEmail(user.email || "");
+      setImage(user.profile_image || null);
+    }
+  }, [user]);
 
   /* IMAGE PICKER */
 
@@ -50,22 +89,68 @@ export default function ManageProfileScreen() {
 
   /* SAVE */
 
-  const handleSave = () => {
-    if (!name || !phone || !email) {
+  const handleSave = async () => {
+    if (!name || !phone) {
       Alert.alert("Error", "Please fill all required fields.");
       return;
     }
 
-    Alert.alert("Success", "Profile updated successfully.");
+    setSaving(true);
+    try {
+      let profile_image = user?.profile_image || "";
+
+      // only upload if the image actually changed (local file uri, not the existing remote url)
+      if (image && image !== user?.profile_image) {
+        profile_image = await uploadToCloudinary(image);
+      }
+
+      const token = await AsyncStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          full_name: name,
+          phone,
+          profile_image,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        updateUser(data.user);
+        Alert.alert("Success", "Profile updated successfully.");
+      } else {
+        Alert.alert("Error", data.detail || "Failed to update profile.");
+      }
+    } catch (e) {
+      Alert.alert("Error", "Cannot connect to server.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* DISCARD */
 
   const handleDiscard = () => {
-    setName("");
-    setPhone("");
-    setEmail("");
+    if (user) {
+      setName(user.full_name || "");
+      setPhone(user.phone || "");
+      setEmail(user.email || "");
+      setImage(user.profile_image || null);
+    }
   };
+
+  if (userLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator color="#FF7A45" size="large" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -80,8 +165,8 @@ export default function ManageProfileScreen() {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         {/* HEADER */}
-        <View style={styles.header}>
-          <TouchableOpacity>
+        <View style={styles.header} >
+          <TouchableOpacity onPress={() => router.push("/profile/Index")} >
             <Ionicons
               name="arrow-back"
               size={24}
@@ -187,22 +272,10 @@ export default function ManageProfileScreen() {
 
             <TextInput
               value={email}
-              onChangeText={setEmail}
+              editable={false}
               placeholder="Enter your E-mail Address"
               placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={[
-                styles.input,
-                {
-                  borderBottomColor:
-                    focusedInput === "email"
-                      ? "#FF7A45"
-                      : "#E5E7EB",
-                },
-              ]}
-              onFocus={() => setFocusedInput("email")}
-              onBlur={() => setFocusedInput("")}
+              style={[styles.input, { color: "#9CA3AF" }]}
             />
           </View>
 
@@ -210,12 +283,15 @@ export default function ManageProfileScreen() {
 
           <View style={styles.buttonRow}>
             <TouchableOpacity
-              style={styles.saveBtn}
+              style={[styles.saveBtn, saving && { opacity: 0.6 }]}
               onPress={handleSave}
+              disabled={saving}
             >
-              <Text style={styles.saveText}>
-                Save Change
-              </Text>
+              {saving ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.saveText}>Save Change</Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity

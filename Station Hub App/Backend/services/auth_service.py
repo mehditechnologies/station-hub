@@ -11,6 +11,7 @@ from schemas.auth_schemas import (
     VerifyOTPRequest,
     ResetPasswordRequest,
     ChangePasswordRequest,
+    UpdateProfileRequest,
 )
 from utils.jwt_handler import create_access_token
 from utils.password_handler import hash_password, verify_password
@@ -202,3 +203,49 @@ async def google_login(id_token: str) -> dict:
         },
     }
 
+
+# ─── Get Current User ───────────────────────────────────────
+async def get_current_user_profile(user_id: str) -> dict:
+    user_doc = db.collection("users").document(user_id).get()
+    if not user_doc.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user = user_doc.to_dict()
+
+    return {
+        "user": {
+            "id": user_id,
+            "full_name": user.get("full_name", ""),
+            "email": user.get("email", ""),
+            "phone": user.get("phone", ""),
+            "profile_image": user.get("profile_image", ""),
+        }
+    }
+
+
+# ─── Update Current User ────────────────────────────────────
+async def update_current_user_profile(body: UpdateProfileRequest, user_id: str) -> dict:
+    user_doc = db.collection("users").document(user_id).get()
+    if not user_doc.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    update_data = {
+        "full_name": body.full_name,
+        "phone": body.phone or "",
+        "profile_image": body.profile_image or "",
+    }
+
+    db.collection("users").document(user_id).update(update_data)
+
+    user = user_doc.to_dict()
+
+    return {
+        "message": "Profile updated successfully",
+        "user": {
+            "id": user_id,
+            "full_name": update_data["full_name"],
+            "email": user.get("email", ""),
+            "phone": update_data["phone"],
+            "profile_image": update_data["profile_image"],
+        },
+    }

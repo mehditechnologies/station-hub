@@ -1,9 +1,11 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { UserProvider } from "../../context/userContext";
 
 export default function TabLayout() {
   return (
-    <Tabs
+    <UserProvider>
+      <Tabs
       initialRouteName="Home/home"
       screenOptions={{
         headerShown: false,
@@ -132,5 +134,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </UserProvider>
   );
 }
