@@ -26,6 +26,7 @@ type Service = {
   rating?: number;
   image_url?: string;
   tiers?: { base?: Tier; premium?: Tier };
+  station_ids?: string[];
 };
 
 export default function ServicesScreen() {
@@ -271,6 +272,10 @@ export default function ServicesScreen() {
                               name: service.name,
                               price: String(tier.price),
                               duration: tier.duration,
+                              image_url: service.image_url || "",
+                              station_ids: JSON.stringify(
+                                service.station_ids || [],
+                              ),
                             },
                           })
                         }

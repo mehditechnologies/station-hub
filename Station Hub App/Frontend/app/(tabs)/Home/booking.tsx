@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,23 +8,13 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
 } from "react-native";
 
+// import { useRouter } from "expo-router";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import Bottomnav from "@/components/Bottomnav";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_BASE } from "../../../src/config"; // adjust relative path as needed
-
-type Station = {
-  id: string;
-  name: string;
-  address?: string;
-  city?: string;
-  image_url?: string;
-};
 
 export default function BookingScreen() {
   const router = useRouter();
@@ -35,80 +25,21 @@ export default function BookingScreen() {
     name?: string;
     price?: string;
     duration?: string;
-    image_url?: string;
-    station_ids?: string;
   }>();
 
   const hasSelectedService = !!params.service_id;
-  console.log("station_ids param:", params.station_ids);
 
+  const [selectedService, setSelectedService] = useState("Full Service");
   const [selectedDate, setSelectedDate] = useState("11");
   const [selectedTime, setSelectedTime] = useState("12:00 PM");
   const [vehicleType, setVehicleType] = useState("Car");
 
-  // ── Stations linked to this service ─────────────────────
-  const [stations, setStations] = useState<Station[]>([]);
-  const [selectedStationId, setSelectedStationId] = useState<string | null>(
-    null,
-  );
-  const [loadingStations, setLoadingStations] = useState(false);
-  const [stationsError, setStationsError] = useState("");
-
-  useEffect(() => {
-    const fetchStations = async () => {
-      if (!params.station_ids) return;
-
-      let ids: string[] = [];
-      try {
-        ids = JSON.parse(params.station_ids);
-      } catch {
-        ids = [];
-      }
-      console.log("parsed ids:", ids);
-      if (!ids.length) return;
-
-      setLoadingStations(true);
-      setStationsError("");
-      try {
-        const token = await AsyncStorage.getItem("token");
-        console.log("token:", token);
-        if (!token) {
-          setStationsError("Please log in to see available stations");
-          return;
-        }
-
-        const results = await Promise.all(
-          ids.map(async (id) => {
-            try {
-              const res = await fetch(`${API_BASE}/stations/${id}`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              console.log("station fetch status:", id, res.status);
-              if (!res.ok) return null;
-              const data = await res.json();
-              console.log("station data:", data);
-              return data.station as Station;
-            } catch (err) {
-              console.log("station fetch error:", id, err);
-              return null;
-            }
-          }),
-        );
-
-        const valid = results.filter(Boolean) as Station[];
-        console.log("valid stations:", valid);
-        setStations(valid);
-        if (valid.length > 0) setSelectedStationId(valid[0].id);
-      } catch (e) {
-        console.log("outer fetch error:", e);
-        setStationsError("Failed to load stations");
-      } finally {
-        setLoadingStations(false);
-      }
-    };
-
-    fetchStations();
-  }, [params.station_ids]);
+  const services = [
+    { id: 1, title: "Car Wash", icon: "car" },
+    { id: 2, title: "Full Service", icon: "car-side" },
+    { id: 3, title: "Oil Changing", icon: "oil-can" },
+    { id: 4, title: "Detailing", icon: "spray-can" },
+  ];
 
   const dates = [
     { day: "Sun", num: "02" },
@@ -123,7 +54,7 @@ export default function BookingScreen() {
 
   return (
     <LinearGradient
-      colors={["#fffdfb", "#fff6f0", "#ffe8d8"]}
+      colors={["#fffdfb", "#fff6f0", "#ffe8d8"]} // ✅ FAVORITES BACKGROUND
       style={styles.container}
     >
       <SafeAreaView style={{ flex: 1 }}>
@@ -157,87 +88,46 @@ export default function BookingScreen() {
               />
             </View>
 
-            {/* SERVICE CARD */}
+            {/* SHOP CARD */}
             <View style={styles.card}>
-              {params.image_url ? (
-                <Image
-                  source={{ uri: params.image_url }}
-                  style={styles.image}
-                />
-              ) : (
-                <Image
-                  source={require("../../../assets/images/riverside.png")}
-                  style={styles.image}
-                />
-              )}
+              <Image
+                source={require("../../../assets/images/riverside.png")}
+                style={styles.image}
+              />
 
-              <Text style={styles.shopName}>{params.name}</Text>
+              <Text style={styles.shopName}>Riverside Detailing</Text>
+              <Text style={styles.location}>📍 Downtown • 1.8 km away</Text>
             </View>
 
-            {/* STATIONS */}
-            <Text style={styles.sectionTitle}>Select Station</Text>
+            {/* SERVICES */}
+            <Text style={styles.sectionTitle}>Select Service</Text>
 
-            {loadingStations && (
-              <View style={{ paddingVertical: 16, alignItems: "center" }}>
-                <ActivityIndicator color="#FF8C42" />
-              </View>
-            )}
-
-            {!loadingStations && stationsError ? (
-              <Text style={styles.stationError}>{stationsError}</Text>
-            ) : null}
-
-            {!loadingStations && !stationsError && stations.length === 0 && (
-              <Text style={styles.stationError}>
-                No stations available for this service.
-              </Text>
-            )}
-
-            {!loadingStations &&
-              stations.map((station) => {
-                const isActive = selectedStationId === station.id;
-                const locationLabel = [station.address, station.city]
-                  .filter(Boolean)
-                  .join(", ");
-                return (
-                  <TouchableOpacity
-                    key={station.id}
+            <View style={styles.serviceContainer}>
+              {services.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.serviceCard,
+                    selectedService === item.title && styles.activeService,
+                  ]}
+                  onPress={() => setSelectedService(item.title)}
+                >
+                  <FontAwesome5
+                    name={item.icon}
+                    size={18}
+                    color={selectedService === item.title ? "#fff" : "#ff8c00"}
+                  />
+                  <Text
                     style={[
-                      styles.stationRow,
-                      isActive && styles.activeStationRow,
+                      styles.serviceText,
+                      selectedService === item.title && { color: "#fff" },
                     ]}
-                    onPress={() => setSelectedStationId(station.id)}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[
-                          styles.stationName,
-                          isActive && { color: "#fff" },
-                        ]}
-                      >
-                        {station.name}
-                      </Text>
-                      {locationLabel ? (
-                        <Text
-                          style={[
-                            styles.stationLocation,
-                            isActive && { color: "#fff" },
-                          ]}
-                        >
-                          📍 {locationLabel}
-                        </Text>
-                      ) : null}
-                    </View>
-                    {isActive && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color="#fff"
-                      />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+                    {item.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             {/* DATE */}
             <Text style={styles.sectionTitle}>Select Date</Text>
@@ -387,43 +277,29 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
 
-  stationError: {
-    marginHorizontal: 18,
-    marginTop: 8,
-    fontSize: 13,
-    color: "#888",
+  serviceContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    marginTop: 10,
   },
 
-  stationRow: {
-    flexDirection: "row",
+  serviceCard: {
+    width: 80,
+    height: 90,
+    justifyContent: "center",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: "#ddd",
-    marginHorizontal: 18,
-    marginTop: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
   },
 
-  activeStationRow: {
+  activeService: {
     backgroundColor: "#FF7A00",
     borderColor: "#FF7A00",
   },
 
-  stationName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#000",
-  },
-
-  stationLocation: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 2,
-  },
+  serviceText: { fontSize: 11, marginTop: 5 },
 
   dateCard: {
     width: 60,
