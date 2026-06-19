@@ -10,6 +10,9 @@ router = APIRouter(prefix="/stations", tags=["Stations"])
 async def get_stations(current_user: dict = Depends(get_current_user)):
     return await station_service.get_all_stations()
 
+@router.get("/public")
+async def public_stations():
+    return await station_service.get_public_stations()
 
 @router.get("/search")
 async def search_stations(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):

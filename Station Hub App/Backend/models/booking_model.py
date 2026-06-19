@@ -14,7 +14,7 @@ class BookingModel:
     vehicle_number: str
     special_request: Optional[str] = ""
     service_id: Optional[str] = ""
-    status: str = "confirmed"
+    status: str = "pending"
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
 
     def to_dict(self) -> dict:

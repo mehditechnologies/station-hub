@@ -1,6 +1,7 @@
 
 from fastapi import HTTPException
 from config.firebase import db
+from datetime import datetime
 
 
 async def get_all_stations() -> dict:
@@ -10,6 +11,16 @@ async def get_all_stations() -> dict:
         data = doc.to_dict()
         data["id"] = doc.id
         stations.append(data)
+    return {"stations": stations}
+
+async def get_public_stations() -> dict:
+    docs = db.collection("stations").where("status", "==", "Active").stream()
+    stations = []
+    for doc in docs:
+        data = doc.to_dict()
+        data["id"] = doc.id
+        stations.append(data)
+    stations.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return {"stations": stations}
 
 
@@ -36,5 +47,6 @@ async def get_station_by_id(station_id: str) -> dict:
 
 async def add_station(body) -> dict:
     data = body.model_dump()
+    data["created_at"] = datetime.utcnow().isoformat()
     doc_ref = db.collection("stations").add(data)
     return {"message": "Station added", "id": doc_ref[1].id}

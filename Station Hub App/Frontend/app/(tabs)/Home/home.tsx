@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,27 +7,67 @@ import {
   Image,
   SafeAreaView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 
 import { useRouter } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
 
-import {
-  Ionicons,
-  MaterialIcons,
-  FontAwesome5,
-} from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import { API_BASE } from "../../../src/config"; // adjust relative path as needed
 
 export default function HomeScreen() {
   const router = useRouter();
 
+  const [stations, setStations] = useState<any[]>([]);
+  const [loadingStations, setLoadingStations] = useState(true);
+  const [stationsError, setStationsError] = useState("");
+  const [sortBy, setSortBy] = useState("newest"); // "newest" | "rated" | "nearest" | "popular"
+
+  useEffect(() => {
+    const fetchStations = async () => {
+      setLoadingStations(true);
+      setStationsError("");
+      try {
+        const res = await fetch(`${API_BASE}/stations/public`);
+        const data = await res.json();
+        if (res.ok) {
+          setStations(data.stations || []);
+        } else {
+          setStationsError(data.detail || "Failed to load stations");
+        }
+      } catch (e) {
+        setStationsError("Cannot connect to server");
+      } finally {
+        setLoadingStations(false);
+      }
+    };
+    fetchStations();
+  }, []);
+
+  const sortOptions = [
+    { key: "newest", label: "Newest" },
+    { key: "rated", label: "Top Rated" },
+    { key: "nearest", label: "Nearest" },
+    { key: "popular", label: "Popular" },
+  ];
+
+  const sortedStations = React.useMemo(() => {
+    const list = [...stations];
+    if (sortBy === "newest") {
+      list.sort((a, b) =>
+        (b.created_at || "").localeCompare(a.created_at || ""),
+      );
+    }
+    // "rated", "nearest", "popular" — no data yet, list stays in default order for now
+    return list;
+  }, [stations, sortBy]);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.userSection}>
@@ -40,15 +80,9 @@ export default function HomeScreen() {
               <Text style={styles.name}>John Doe</Text>
 
               <View style={styles.location}>
-                <Ionicons
-                  name="location-sharp"
-                  size={15}
-                  color="#FF7A45"
-                />
+                <Ionicons name="location-sharp" size={15} color="#FF7A45" />
 
-                <Text style={styles.locationText}>
-                  Brooklyn, New York
-                </Text>
+                <Text style={styles.locationText}>Brooklyn, New York</Text>
               </View>
             </View>
           </View>
@@ -109,69 +143,77 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
 
-        {/* SERVICES */}
-        <Text style={styles.heading}>Nearby Top Services</Text>
+        {/* STATIONS */}
+        <Text style={styles.heading}>Explore Stations</Text>
 
-        {[
-          {
-            image: require("../../../assets/images/service1.png"),
-            title: "Riverside Detailing",
-          },
-          {
-            image: require("../../../assets/images/service2.png"),
-            title: "Brookside Car Care",
-          },
-          {
-            image: require("../../../assets/images/service3.png"),
-            title: "Newburgh Auto Spa",
-          },
-          {
-            image: require("../../../assets/images/service4.png"),
-            title: "Newburgh Auto Spa",
-          },
-          {
-            image: require("../../../assets/images/service5.png"),
-            title: "Newburgh Auto Spa",
-          },
-          
-        ].map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.serviceCard}
-            onPress={() =>
-              router.push("/(tabs)/Home/stationdetail")
-            }
-          >
-            <Image
-              source={item.image}
-              style={styles.serviceImage}
-            />
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.serviceTitle}>
-                {item.title}
+        {/* SORT BUTTONS */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 10 }}
+        >
+          {sortOptions.map((opt) => (
+            <TouchableOpacity
+              key={opt.key}
+              style={[
+                styles.sortBtn,
+                sortBy === opt.key && styles.sortBtnActive,
+              ]}
+              onPress={() => setSortBy(opt.key)}
+            >
+              <Text
+                style={[
+                  styles.sortBtnText,
+                  sortBy === opt.key && styles.sortBtnTextActive,
+                ]}
+              >
+                {opt.label}
               </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-              <View style={styles.rating}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Ionicons
-                    key={star}
-                    name="star"
-                    size={14}
-                    color="#FFB000"
+        {!loadingStations &&
+          sortedStations.map((station) => {
+            const locationLabel = [station.address, station.city]
+              .filter(Boolean)
+              .join(", ");
+            return (
+              <TouchableOpacity
+                key={station.id}
+                style={styles.serviceCard}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tabs)/Home/stationdetail",
+                    params: { station_id: station.id },
+                  })
+                }
+              >
+                {station.image_url ? (
+                  <Image
+                    source={{ uri: station.image_url }}
+                    style={styles.serviceImage}
                   />
-                ))}
-              </View>
-            </View>
+                ) : (
+                  <Image
+                    source={require("../../../assets/images/service1.png")}
+                    style={styles.serviceImage}
+                  />
+                )}
 
-            <Ionicons
-              name="heart-outline"
-              size={22}
-              color="#FF7A45"
-            />
-          </TouchableOpacity>
-        ))}
-
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.serviceTitle}>{station.name}</Text>
+                  {locationLabel ? (
+                    <Text style={styles.serviceLocation}>{locationLabel}</Text>
+                  ) : null}
+                  <View style={styles.ratingRow}>
+                    <Text style={styles.ratingText}>4.8</Text>
+                    <Text style={styles.ratingStar}>★</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
       </ScrollView>
 
       <Bottomnav />
@@ -282,8 +324,56 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  rating: {
+  sortBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#FFF1E8",
+    marginLeft: 15,
+  },
+
+  sortBtnActive: {
+    backgroundColor: "#FF7A45",
+  },
+
+  sortBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#FF7A45",
+  },
+
+  sortBtnTextActive: {
+    color: "#fff",
+  },
+
+  stationsMsg: {
+    textAlign: "center",
+    color: "#888",
+    marginTop: 10,
+    marginHorizontal: 18,
+  },
+
+  serviceLocation: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 4,
+  },
+
+  ratingRow: {
     flexDirection: "row",
-    marginTop: 5,
+    alignItems: "center",
+    marginTop: 6,
+  },
+
+  ratingText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#444",
+    marginRight: 4,
+  },
+
+  ratingStar: {
+    fontSize: 13,
+    color: "#FFB400",
   },
 });
