@@ -14,6 +14,10 @@ async def get_stations(current_user: dict = Depends(get_current_user)):
 async def public_stations():
     return await station_service.get_public_stations()
 
+@router.get("/public/{station_id}")
+async def public_station_detail(station_id: str):
+    return await station_service.get_station_by_id(station_id)
+
 @router.get("/search")
 async def search_stations(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
     return await station_service.search_stations(q)

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,16 +8,108 @@ import {
   Image,
   StatusBar,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import { API_BASE } from "../../../src/config"; // adjust relative path as needed
 
 const { width } = Dimensions.get("window");
 
 export default function StationDetail() {
   const router = useRouter();
+  const { station_id } = useLocalSearchParams<{ station_id: string }>();
+
+  const [station, setStation] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [services, setServices] = useState<any[]>([]);
+  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const fetchStation = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(`${API_BASE}/stations/public/${station_id}`);
+        const data = await res.json();
+        if (res.ok) {
+          setStation(data.station);
+        } else {
+          setError(data.detail || "Failed to load station");
+        }
+      } catch (e) {
+        setError("Cannot connect to server");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchServices = async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/services/public/station/${station_id}`,
+        );
+        const data = await res.json();
+        if (res.ok) {
+          setServices(data.services || []);
+        }
+      } catch (e) {
+        // silently ignore — station details still show without services
+      }
+    };
+
+    if (station_id) {
+      fetchStation();
+      fetchServices();
+    }
+  }, [station_id]);
+
+  const toggleExpand = (serviceId: string) => {
+    setExpandedServiceId((prev) => (prev === serviceId ? null : serviceId));
+  };
+
+  const handleSelectTier = (service: any, tierKey: "base" | "premium") => {
+    const tier = service.tiers?.[tierKey];
+    if (!tier) return;
+    router.push({
+      pathname: "/(tabs)/Booking/booking",
+      params: {
+        service_id: service.id,
+        tier: tierKey,
+        name: service.name,
+        price: String(tier.price),
+        duration: String(tier.duration),
+        image_url: service.image_url || "",
+        station_ids: JSON.stringify(service.station_ids || []),
+      },
+    });
+  };
+
+  const locationLabel = station
+    ? [station.address, station.city].filter(Boolean).join(", ")
+    : "";
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator color="#F97316" size="large" />
+      </View>
+    );
+  }
+
+  if (error || !station) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>{error || "Station not found"}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -29,21 +121,26 @@ export default function StationDetail() {
           <Ionicons name="arrow-back" size={22} color="#000" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Riverside Detailing</Text>
-
-        <Ionicons name="information-circle-outline" size={22} color="#000" />
+        <Text style={styles.headerTitle}>{station.name}</Text>
+        {/* <Ionicons name="information-circle-outline" size={22} color="#000" /> */}
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        
         {/* MAIN CARD */}
         <View style={styles.card}>
-          <Image
-            source={require("../../../assets/images/riverside.png")}
-            style={styles.mainImage}
-          />
+          {station.image_url ? (
+            <Image
+              source={{ uri: station.image_url }}
+              style={styles.mainImage}
+            />
+          ) : (
+            <Image
+              source={require("../../../assets/images/riverside.png")}
+              style={styles.mainImage}
+            />
+          )}
 
-          <Text style={styles.stationTitle}>Riverside Detailing</Text>
+          <Text style={styles.stationTitle}>{station.name}</Text>
 
           <View style={styles.row}>
             {[1, 2, 3, 4, 5].map((i) => (
@@ -52,52 +149,68 @@ export default function StationDetail() {
             <Text style={{ marginLeft: 6, fontSize: 12 }}>25</Text>
           </View>
 
-          <View style={styles.row}>
-            <Ionicons name="location-sharp" size={16} color="gray" />
-            <Text style={styles.locationText}>
-              Downtown Chicago • 1.8 km away
-            </Text>
-          </View>
+          {locationLabel ? (
+            <View style={styles.row}>
+              <Ionicons name="location-sharp" size={16} color="gray" />
+              <Text style={styles.locationText}>{locationLabel}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* ABOUT CARD */}
         <View style={styles.aboutCard}>
           <Text style={styles.aboutTitle}>About</Text>
 
-          <Text style={styles.aboutText}>
-            Riverside Detailing provides professional car care services, from
-            quick washes to complete detailing. Our skilled team uses modern
-            tools and quality products to keep your vehicle clean, protected,
-            and looking its best.
-          </Text>
+          <Text style={styles.aboutText}>{station.description}</Text>
 
-          {/* ICONS */}
-          <View style={styles.iconRow}>
-            <View style={styles.iconBox}>
-              <Ionicons name="car" size={18} color="#fff" />
-              <Text style={styles.iconLabel}>Express Wash</Text>
-            </View>
+          {/* OFFERED SERVICES */}
+          <Text style={styles.offeredHeading}>Offered Services:</Text>
 
-            <View style={styles.iconBox}>
-              <Ionicons name="star" size={18} color="#fff" />
-              <Text style={styles.iconLabel}>Premium</Text>
-            </View>
+          {services.length === 0 ? (
+            <Text style={styles.noServicesText}>
+              No services available at this station yet.
+            </Text>
+          ) : (
+            services.map((service) => {
+              const isExpanded = expandedServiceId === service.id;
+              const availableTiers = Object.keys(service.tiers || {}).filter(
+                (key) => service.tiers[key]
+              ) as Array<"base" | "premium">;
 
-            <View style={styles.iconBox}>
-              <Ionicons name="water" size={18} color="#fff" />
-              <Text style={styles.iconLabel}>Interior</Text>
-            </View>
+              return (
+                <View key={service.id} style={styles.serviceAccordionItem}>
+                  <TouchableOpacity
+                    style={styles.serviceAccordionHeader}
+                    onPress={() => toggleExpand(service.id)}
+                  >
+                    <Text style={styles.serviceAccordionName}>{service.name}</Text>
+                    <Ionicons
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color="#fff"
+                    />
+                  </TouchableOpacity>
 
-            <View style={styles.iconBox}>
-              <FontAwesome5 name="cogs" size={16} color="#fff" />
-              <Text style={styles.iconLabel}>Engine</Text>
-            </View>
-
-            <View style={styles.iconBox}>
-              <Ionicons name="shield-checkmark" size={18} color="#fff" />
-              <Text style={styles.iconLabel}>Waxing</Text>
-            </View>
-          </View>
+                  {isExpanded && (
+                    <View style={styles.serviceAccordionBody}>
+                      {availableTiers.map((tierKey) => (
+                        <TouchableOpacity
+                          key={tierKey}
+                          style={styles.tierButton}
+                          onPress={() => handleSelectTier(service, tierKey)}
+                        >
+                          <Text style={styles.tierButtonText}>
+                            {tierKey === "base" ? "Base" : "Premium"} — $
+                            {service.tiers[tierKey].price}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })
+          )}
 
           {/* IMAGE GRID */}
           <View style={styles.imageGrid}>
@@ -121,10 +234,9 @@ export default function StationDetail() {
         </View>
 
         {/* BUTTON */}
-        <TouchableOpacity style={styles.button}>
+        {/* <TouchableOpacity style={styles.button}>
           <Text style={styles.buttonText}>Schedule</Text>
-        </TouchableOpacity>
-
+        </TouchableOpacity> */}
       </ScrollView>
 
       <Bottomnav />
@@ -139,14 +251,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#FDE9E6",
   },
 
- header: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  paddingHorizontal: 16,
-  paddingVertical: 10,
-  marginTop: 10, // 👈 only small spacing
-},
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginTop: 10, // 👈 only small spacing
+  },
 
   headerTitle: {
     fontSize: 18,
@@ -262,8 +374,72 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  errorText: {
+    color: "#888",
+    fontSize: 14,
+  },
+
   buttonText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+
+  offeredHeading: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 15,
+    marginBottom: 8,
+  },
+
+  noServicesText: {
+    color: "#9aa5b8",
+    fontSize: 12,
+    fontStyle: "italic",
+  },
+
+  serviceAccordionItem: {
+    backgroundColor: "#243650",
+    borderRadius: 12,
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+
+  serviceAccordionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+
+  serviceAccordionName: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  serviceAccordionBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+    gap: 8,
+  },
+
+  tierButton: {
+    backgroundColor: "#F97316",
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+
+  tierButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
   },
 });

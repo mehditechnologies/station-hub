@@ -47,3 +47,26 @@ async def get_public_services() -> dict:
     services = [{"id": d.id, **d.to_dict()} for d in docs]
     services.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return {"services": services}
+
+
+async def get_services_for_station(station_id: str) -> dict:
+    status_docs = (
+        db.collection("serviceStationStatus")
+        .where("stationId", "==", station_id)
+        .where("isAvailable", "==", True)
+        .stream()
+    )
+    service_ids = [d.to_dict().get("serviceId") for d in status_docs]
+    service_ids = [sid for sid in service_ids if sid]
+
+    if not service_ids:
+        return {"services": []}
+
+    services = []
+    for sid in service_ids:
+        doc = db.collection("services").document(sid).get()
+        if doc.exists:
+            services.append({"id": doc.id, **doc.to_dict()})
+
+    services.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return {"services": services}

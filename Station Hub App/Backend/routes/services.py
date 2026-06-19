@@ -28,3 +28,7 @@ async def delete_service(service_id: str, current_user: dict = Depends(get_curre
 @router.get("/public")
 async def get_public_services():
     return await service_service.get_public_services()
+
+@router.get("/public/station/{station_id}")
+async def get_services_by_station(station_id: str):
+    return await service_service.get_services_for_station(station_id)
