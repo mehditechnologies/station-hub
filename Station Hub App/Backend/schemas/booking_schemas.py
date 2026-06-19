@@ -4,9 +4,10 @@ from typing import Optional
 
 class BookingRequest(BaseModel):
     station_id: str
-    from_location: str
-    to_location: str
     travel_date: str
     travel_time: str
-    seat_count: int
+    vehicle_type: str
+    vehicle_brand: str
+    vehicle_number: str
+    special_request: Optional[str] = ""
     service_id: Optional[str] = None

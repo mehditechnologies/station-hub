@@ -13,11 +13,12 @@ async def create_booking(body: BookingRequest, user_id: str) -> dict:
     booking = BookingModel(
         user_id=user_id,
         station_id=body.station_id,
-        from_location=body.from_location,
-        to_location=body.to_location,
         travel_date=body.travel_date,
         travel_time=body.travel_time,
-        seat_count=body.seat_count,
+        vehicle_type=body.vehicle_type,
+        vehicle_brand=body.vehicle_brand,
+        vehicle_number=body.vehicle_number,
+        special_request=body.special_request or "",
         service_id=body.service_id or "",
     )
 
