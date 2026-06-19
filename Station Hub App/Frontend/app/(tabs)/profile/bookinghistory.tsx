@@ -91,10 +91,10 @@ export default function BookingHistoryScreen() {
 
         <Text style={styles.title}>Booking History</Text>
 
-        <Image
+        {/* <Image
           source={require("../../../assets/images/johndoe.png")}
           style={styles.avatar}
-        />
+        /> */}
       </View>
 
       {/* TABS */}
@@ -217,6 +217,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
+    textAlign: "center",
+    width: "100%",
+    paddingRight:38,
   },
 
   avatar: {
