@@ -211,6 +211,8 @@ export default function HomeScreen() {
                     <Text style={styles.ratingStar}>★</Text>
                   </View>
                 </View>
+
+                <Ionicons name="chevron-forward" size={18} color="#ccc" />
               </TouchableOpacity>
             );
           })}
