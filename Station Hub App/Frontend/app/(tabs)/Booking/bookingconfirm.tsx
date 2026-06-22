@@ -96,7 +96,7 @@ export default function BookingConfirmedScreen() {
       contentContainerStyle={{ paddingBottom: 100 }}
     >
       {/* HEADER */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color="#000" />
         </TouchableOpacity>
@@ -107,7 +107,7 @@ export default function BookingConfirmedScreen() {
           source={require("../../../assets/images/johndoe.png")}
           style={styles.profileImage}
         />
-      </View>
+      </View> */}
 
       {/* TITLE */}
       <Text style={styles.title}>Booking Confirmed!</Text>
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "700",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 80,
   },
 
   subtitle: {

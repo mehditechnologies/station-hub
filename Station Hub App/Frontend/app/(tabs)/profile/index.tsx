@@ -178,23 +178,22 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    // flexDirection: "row",
-    padding: 10,
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginVertical: 28,
   },
 
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
-    textAlign:"center",
-    marginTop:0,
-    // width:"100%",
+    color: "#000",
   },
 
   profileCard: {
     backgroundColor: "#fff",
-    margin: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 16,
     borderRadius: 16,
     flexDirection: "row",

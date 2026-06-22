@@ -11,3 +11,4 @@ class BookingRequest(BaseModel):
     vehicle_number: str
     special_request: Optional[str] = ""
     service_id: Optional[str] = None
+    tier: Optional[str] = None

@@ -20,6 +20,7 @@ async def create_booking(body: BookingRequest, user_id: str) -> dict:
         vehicle_number=body.vehicle_number,
         special_request=body.special_request or "",
         service_id=body.service_id or "",
+        tier=body.tier or "",
     )
 
     doc_ref = db.collection("bookings").add(booking.to_dict())
@@ -51,9 +52,30 @@ async def get_my_bookings(user_id: str) -> dict:
     bookings = []
     for doc in docs:
         data = doc.to_dict()
+
         station_doc = db.collection("stations").document(data["station_id"]).get()
         station_name = station_doc.to_dict().get("name", "") if station_doc.exists else ""
-        bookings.append({"id": doc.id, "station_name": station_name, **data})
+
+        service_name = ""
+        price = None
+        service_id = data.get("service_id")
+        if service_id:
+            service_doc = db.collection("services").document(service_id).get()
+            if service_doc.exists:
+                service_data = service_doc.to_dict()
+                service_name = service_data.get("name", "")
+                tier = data.get("tier")
+                tiers = service_data.get("tiers", {})
+                if tier and tiers.get(tier):
+                    price = tiers[tier].get("price")
+
+        bookings.append({
+            "id": doc.id,
+            "station_name": station_name,
+            "service_name": service_name,
+            "price": price,
+            **data,
+        })
 
     bookings.sort(key=lambda x: x.get("created_at", ""), reverse=True)
 

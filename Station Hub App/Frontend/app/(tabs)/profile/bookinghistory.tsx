@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,71 +8,66 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+
+const TAB_STATUS_MAP: Record<string, string[]> = {
+  upcoming: ["pending", "confirmed"],
+  completed: ["completed"],
+  closed: ["cancelled", "rejected"],
+};
+
+const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+  pending: { bg: "#FEF3C7", text: "#B45309", label: "Pending" },
+  confirmed: { bg: "#D1FAE5", text: "#047857", label: "Confirmed" },
+  completed: { bg: "#D1FAE5", text: "#047857", label: "Completed" },
+  cancelled: { bg: "#FEE2E2", text: "#B91C1C", label: "Cancelled" },
+  rejected: { bg: "#FEE2E2", text: "#B91C1C", label: "Rejected" },
+};
 
 export default function BookingHistoryScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("upcoming");
 
-  const bookingData = [
-    {
-      id: "1",
-      service: "Premium Detail",
-      shop: "Riverside Detailing",
-      car: "Honda Civic, ALS 666",
-      date: "Feb 24, 2026",
-      time: "10:00 AM",
-      price: "$ 20.50",
-      status: "upcoming",
-      hoursLeft: 26,
-      image: require("../../../assets/images/booking.png"),
-    },
-    {
-      id: "2",
-      service: "Premium Detail",
-      shop: "Riverside Detailing",
-      car: "Toyota Corolla",
-      date: "Feb 24, 2026",
-      time: "12:00 PM",
-      price: "$ 20.50",
-      status: "upcoming",
-      hoursLeft: 10,
-      image: require("../../../assets/images/booking.png"),
-    },
-     {
-      id: "3",
-      service: "Premium Detail",
-      shop: "Riverside Detailing",
-      car: "Toyota Corolla",
-      date: "Feb 24, 2026",
-      time: "12:00 PM",
-      price: "$ 20.50",
-      status: "upcoming",
-      hoursLeft: 10,
-      image: require("../../../assets/images/booking.png"),
-    },
-     {
-      id: "4",
-      service: "Premium Detail",
-      shop: "Riveride Detailing",
-      car: "Toyota Corolla",
-      date: "Feb 25, 2026",
-      time: "12:00 PM",
-      price: "$ 20.50",
-      status: "upcoming",
-      hoursLeft: 10,
-      image: require("../../../assets/images/booking.png"),
-    },
-  ];
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const filteredData = bookingData.filter(
-    (item) => item.status === activeTab
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const res = await fetch(`${API_BASE}/bookings/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setBookings(data.bookings || []);
+        } else {
+          setError(data.detail || "Failed to load bookings");
+        }
+      } catch (e) {
+        setError("Cannot connect to server");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, []);
+
+  const filteredData = bookings.filter((item) =>
+    (TAB_STATUS_MAP[activeTab] || []).includes(item.status)
   );
 
-  const handleCancel = () => {
+  const handleCancel = (bookingId: string) => {
     Alert.alert("Cancel Booking", "Are you sure you want to cancel?", [
       { text: "No" },
       { text: "Yes", style: "destructive" },
@@ -99,7 +94,7 @@ export default function BookingHistoryScreen() {
 
       {/* TABS */}
       <View style={styles.tabs}>
-        {["upcoming", "completed", "cancelled"].map((tab) => (
+        {["upcoming", "completed", "closed"].map((tab) => (
           <TouchableOpacity
             key={tab}
             onPress={() => setActiveTab(tab)}
@@ -118,7 +113,7 @@ export default function BookingHistoryScreen() {
                 ? "Up-Coming"
                 : tab === "completed"
                 ? "Completed"
-                : "Cancelled"}
+                : "Closed"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -126,13 +121,23 @@ export default function BookingHistoryScreen() {
 
       {/* LIST */}
       <ScrollView contentContainerStyle={{ paddingBottom: 90 }}>
-        {activeTab !== "upcoming" ? (
+        {loading ? (
+          <View style={{ marginTop: 60, alignItems: "center" }}>
+            <ActivityIndicator color="#FF7A45" size="large" />
+          </View>
+        ) : error ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>{error}</Text>
+          </View>
+        ) : filteredData.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons
               name={
                 activeTab === "completed"
                   ? "checkmark-circle-outline"
-                  : "close-circle-outline"
+                  : activeTab === "closed"
+                  ? "close-circle-outline"
+                  : "time-outline"
               }
               size={60}
               color="#FF7A45"
@@ -141,7 +146,9 @@ export default function BookingHistoryScreen() {
             <Text style={styles.emptyTitle}>
               {activeTab === "completed"
                 ? "No completed bookings yet"
-                : "No cancelled bookings yet"}
+                : activeTab === "closed"
+                ? "No cancelled or rejected bookings"
+                : "No upcoming bookings yet"}
             </Text>
 
             <Text style={styles.emptySub}>
@@ -149,47 +156,64 @@ export default function BookingHistoryScreen() {
             </Text>
           </View>
         ) : (
-          filteredData.map((item) => (
-            <View key={item.id} style={styles.card}>
-              <Image source={item.image} style={styles.cardImage} />
+          filteredData.map((item) => {
+            const statusStyle = STATUS_STYLES[item.status] || {
+              bg: "#F3F4F6",
+              text: "#6B7280",
+              label: item.status,
+            };
 
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.service}>{item.service}</Text>
-                <Text style={styles.shop}>{item.shop}</Text>
+            return (
+              <View key={item.id} style={styles.card}>
+                <Image
+                  source={require("../../../assets/images/booking.png")}
+                  style={styles.cardImage}
+                />
 
-                <View style={styles.row}>
-                  <Ionicons name="car-outline" size={14} color="#6B7280" />
-                  <Text style={styles.text}>{item.car}</Text>
-                </View>
-
-                <View style={styles.row}>
-                  <Ionicons name="calendar-outline" size={14} color="#6B7280" />
-                  <Text style={styles.text}>
-                    {item.date} • {item.time}
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.service}>
+                    {item.service_name || "Service"}
                   </Text>
-                </View>
+                  <Text style={styles.shop}>{item.station_name}</Text>
 
-                <Text style={styles.price}>
-                  Total Payment $ {item.price}
-                </Text>
-
-                <View style={styles.bottomRow}>
-                  <View style={styles.hoursBtn}>
-                    <Text style={{ color: "#fff", fontSize: 10 }}>
-                      {item.hoursLeft} Hours Left
+                  <View style={styles.row}>
+                    <Ionicons name="car-outline" size={14} color="#6B7280" />
+                    <Text style={styles.text}>
+                      {item.vehicle_brand} {item.vehicle_number ? `, ${item.vehicle_number}` : ""}
                     </Text>
                   </View>
 
-                  <TouchableOpacity
-                    style={styles.cancelBtn}
-                    onPress={handleCancel}
-                  >
-                    <Text style={styles.cancelText}>Cancel</Text>
-                  </TouchableOpacity>
+                  <View style={styles.row}>
+                    <Ionicons name="calendar-outline" size={14} color="#6B7280" />
+                    <Text style={styles.text}>
+                      {item.travel_date} • {item.travel_time}
+                    </Text>
+                  </View>
+
+                  {item.price != null && (
+                    <Text style={styles.price}>Total Payment $ {item.price}</Text>
+                  )}
+
+                  <View style={styles.bottomRow}>
+                    <View style={[styles.statusCapsule, { backgroundColor: statusStyle.bg }]}>
+                      <Text style={[styles.statusCapsuleText, { color: statusStyle.text }]}>
+                        {statusStyle.label}
+                      </Text>
+                    </View>
+
+                    {activeTab === "upcoming" && (
+                      <TouchableOpacity
+                        style={styles.cancelBtn}
+                        onPress={() => handleCancel(item.id)}
+                      >
+                        <Text style={styles.cancelText}>Cancel</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
               </View>
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>
@@ -305,11 +329,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  hoursBtn: {
-    backgroundColor: "#FF7A45",
+  statusCapsule: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
+  },
+
+  statusCapsuleText: {
+    fontSize: 10,
+    fontWeight: "700",
   },
 
   cancelBtn: {

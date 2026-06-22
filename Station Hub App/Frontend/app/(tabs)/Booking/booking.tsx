@@ -178,6 +178,7 @@ export default function BookingScreen() {
           vehicle_number: vehicleNumber.trim(),
           special_request: specialRequest.trim(),
           service_id: params.service_id || null,
+          tier: params.tier || null,
         }),
       });
 
@@ -225,16 +226,11 @@ export default function BookingScreen() {
           <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
             {/* HEADER */}
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()}>
-                <Ionicons name="arrow-back" size={24} color="#000" />
-              </TouchableOpacity>
+              
 
               <Text style={styles.headerTitle}>Book Your Wash</Text>
 
-              <Image
-                source={require("../../../assets/images/johndoe.png")}
-                style={styles.profileImage}
-              />
+              
             </View>
 
             {/* SERVICE CARD */}
@@ -545,18 +541,25 @@ const styles = StyleSheet.create({
   },
 
   header: {
+    // flexDirection: "row",
+    // justifyContent: "space-between",
+    // padding: 18,
+    // marginTop: 40,
     flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 18,
-    marginTop: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 28,
   },
 
-  headerTitle: { fontSize: 20, fontWeight: "700" },
+  headerTitle: { fontSize: 22,
+    fontWeight: "700",
+    color: "#000", },
 
   profileImage: { width: 40, height: 40, borderRadius: 20 },
 
   card: {
-    margin: 18,
+    marginBottom: 5,
+    marginHorizontal:18,
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
