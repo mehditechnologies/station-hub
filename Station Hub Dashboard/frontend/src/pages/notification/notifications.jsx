@@ -9,6 +9,7 @@ import {
   doc,
   updateDoc,
   writeBatch,
+  getDocs,
 } from 'firebase/firestore'
 import { db } from "../../firebase"; // adjust path to your firebase config
 
@@ -229,24 +230,67 @@ const Notifications = () => {
 
         onSnapshot(
           bookingsQuery,
-          (snapshot) => {
-            const items = snapshot.docs.map((d) => ({
-              id: d.id,
-              read: d.data().dashboardRead ?? false,
-              userName: d.data().user_name || "Unknown User",
-              service: d.data().car || "Car Service",
-              date: d.data().travel_date || "",
-              time: d.data().travel_time || "",
-              fromLocation: d.data().from_location || "",
-              toLocation: d.data().to_location || "",
-              seatCount: d.data().seat_count || null,
-              serviceId: d.data().service_id || "",
-              stationId: d.data().station_id || "",
-              userId: d.data().user_id || "",
-              status: d.data().status || "pending",
-              total: d.data().price || null,
-              createdAt: d.data().created_at || d.data().createdAt,
-            }));
+          async (snapshot) => {
+            const userCache = {};
+            const serviceCache = {};
+
+            const items = await Promise.all(
+              snapshot.docs.map(async (d) => {
+                const data = d.data();
+                const userId = data.user_id || "";
+                const serviceId = data.service_id || "";
+
+                // ── User lookup (name + profile image) ──
+                let userName = "Unknown User";
+                let userProfileImage = "";
+                if (userId) {
+                  if (!userCache[userId]) {
+                    const userSnap = await getDocs(
+                      query(collection(db, "users"), where("__name__", "==", userId)),
+                    );
+                    userCache[userId] = userSnap.empty ? null : userSnap.docs[0].data();
+                  }
+                  if (userCache[userId]) {
+                    userName = userCache[userId].full_name || "Unknown User";
+                    userProfileImage = userCache[userId].profile_image || "";
+                  }
+                }
+
+                // ── Service lookup (name) ──
+                let serviceName = "Service";
+                if (serviceId) {
+                  if (!serviceCache[serviceId]) {
+                    const serviceSnap = await getDocs(
+                      query(collection(db, "services"), where("__name__", "==", serviceId)),
+                    );
+                    serviceCache[serviceId] = serviceSnap.empty ? null : serviceSnap.docs[0].data();
+                  }
+                  if (serviceCache[serviceId]) {
+                    serviceName = serviceCache[serviceId].name || "Service";
+                  }
+                }
+
+                return {
+                  id: d.id,
+                  read: data.dashboardRead ?? false,
+                  userName,
+                  userProfileImage,
+                  service: serviceName,
+                  tier: data.tier || "",
+                  date: data.travel_date || "",
+                  time: data.travel_time || "",
+                  vehicleType: data.vehicle_type || "",
+                  vehicleBrand: data.vehicle_brand || "",
+                  vehicleNumber: data.vehicle_number || "",
+                  serviceId,
+                  stationId: data.station_id || "",
+                  userId,
+                  status: data.status || "pending",
+                  createdAt: data.created_at || data.createdAt,
+                };
+              }),
+            );
+
             setNotifications(items);
             setLoading(false);
           },
@@ -416,18 +460,26 @@ const Notifications = () => {
                       : "hover:bg-gray-50/60"
                 }`}
               >
-                {/* Icon bubble */}
-                <div
-                  className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-base mt-0.5 ${
-                    !n.read
-                      ? "bg-orange-500 text-white shadow-sm shadow-orange-200"
-                      : D
-                        ? "bg-[#2a2d3e] text-gray-400"
-                        : "bg-gray-100 text-gray-500"
-                  }`}
-                >
-                  {serviceIcon(n.service)}
-                </div>
+                {/* Avatar bubble */}
+                {n.userProfileImage ? (
+                  <img
+                    src={n.userProfileImage}
+                    alt={n.userName}
+                    className="flex-shrink-0 w-9 h-9 rounded-xl object-cover mt-0.5"
+                  />
+                ) : (
+                  <div
+                    className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-base mt-0.5 ${
+                      !n.read
+                        ? "bg-orange-500 text-white shadow-sm shadow-orange-200"
+                        : D
+                          ? "bg-[#2a2d3e] text-gray-400"
+                          : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {serviceIcon(n.service)}
+                  </div>
+                )}
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
@@ -456,15 +508,15 @@ const Notifications = () => {
                     <span className={`font-medium ${txt}`}>{n.service}</span>
                   </p>
 
-                  {/* Route row */}
-                  {(n.fromLocation || n.toLocation) && (
+                  {/* Vehicle row */}
+                  {n.vehicleBrand && (
                     <div
                       className={`flex items-center gap-1.5 mt-1.5 text-xs ${sub}`}
                     >
                       <IconCar />
-                      <span>{n.fromLocation}</span>
-                      <span className={hint}>→</span>
-                      <span>{n.toLocation}</span>
+                      <span>
+                        {n.vehicleType} — {n.vehicleBrand} {n.vehicleNumber}
+                      </span>
                     </div>
                   )}
 
@@ -479,18 +531,8 @@ const Notifications = () => {
                         {n.time && ` · ${n.time}`}
                       </span>
                     )}
-                    {n.seatCount && (
-                      <span className="flex items-center gap-1">
-                        <IconUser />
-                        {n.seatCount} seat{n.seatCount > 1 ? "s" : ""}
-                      </span>
-                    )}
-                    {n.total && (
-                      <span
-                        className={`font-semibold ${D ? "text-gray-300" : "text-gray-600"}`}
-                      >
-                        Rs. {Number(n.total).toLocaleString()}
-                      </span>
+                    {n.tier && (
+                      <span className="capitalize">{n.tier} tier</span>
                     )}
                   </div>
                 </div>
