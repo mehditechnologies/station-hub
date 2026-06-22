@@ -190,10 +190,17 @@ export default function BookingHistoryScreen() {
 
             return (
               <View key={item.id} style={styles.card}>
-                <Image
-                  source={require("../../../assets/images/booking.png")}
-                  style={styles.cardImage}
-                />
+                {item.service_image ? (
+                  <Image
+                    source={{ uri: item.service_image }}
+                    style={styles.cardImage}
+                  />
+                ) : (
+                  <Image
+                    source={require("../../../assets/images/booking.png")}
+                    style={styles.cardImage}
+                  />
+                )}
 
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={styles.service}>

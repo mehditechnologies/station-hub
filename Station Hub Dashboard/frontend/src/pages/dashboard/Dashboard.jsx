@@ -225,9 +225,17 @@ const Dashboard = () => {
               {pending.map(b => (
                 <div key={b.id} className="px-5 py-4">
                   <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
-                      {avatar(b.user_name)}
-                    </div>
+                    {b.user_profile_image ? (
+                      <img
+                        src={b.user_profile_image}
+                        alt={b.user_name}
+                        className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
+                        {avatar(b.user_name)}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <p className={`text-sm font-semibold ${txt}`}>{b.user_name || 'Unknown'}</p>
@@ -236,13 +244,22 @@ const Dashboard = () => {
                         </span>
                       </div>
                       <p className={`text-xs mt-0.5 ${sub}`}>
-                        {b.from_location} → {b.to_location}
+                        {b.service_name} {b.tier && `(${b.tier})`} · {b.station_name}
                       </p>
                       <div className={`flex items-center gap-3 mt-1.5 text-xs ${sub}`}>
                         <span className="flex items-center gap-1"><IconCalendar /> {b.travel_date}</span>
                         <span className="flex items-center gap-1"><IconClock /> {b.travel_time}</span>
-                        {b.car && <span className="flex items-center gap-1"><IconCar /> {b.car}</span>}
+                        {b.vehicle_brand && (
+                          <span className="flex items-center gap-1">
+                            <IconCar /> {b.vehicle_type} — {b.vehicle_brand} {b.vehicle_number}
+                          </span>
+                        )}
                       </div>
+                      {b.special_request && (
+                        <p className={`text-xs mt-1.5 italic ${sub}`}>
+                          "{b.special_request}"
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mt-3">
                         <button
                           disabled={actioning[b.id]}
@@ -288,17 +305,35 @@ const Dashboard = () => {
               {confirmed.map(b => (
                 <div key={b.id} className="px-5 py-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
-                      {avatar(b.user_name)}
-                    </div>
+                    {b.user_profile_image ? (
+                      <img
+                        src={b.user_profile_image}
+                        alt={b.user_name}
+                        className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
+                        {avatar(b.user_name)}
+                      </div>
+                    )}
                     <p className={`text-sm font-semibold truncate ${txt}`}>{b.user_name || 'Unknown'}</p>
                   </div>
-                  <p className={`text-xs ${sub}`}>{b.from_location} → {b.to_location}</p>
+                  <p className={`text-xs ${sub}`}>
+                    {b.service_name} {b.tier && `(${b.tier})`} · {b.station_name}
+                  </p>
                   <div className={`flex items-center gap-1 text-xs mt-0.5 ${sub}`}>
                     <IconCalendar />{b.travel_date}
                     <span className="mx-1">·</span>
                     <IconClock />{b.travel_time}
                   </div>
+                  {b.vehicle_brand && (
+                    <p className={`text-xs mt-0.5 flex items-center gap-1 ${sub}`}>
+                      <IconCar /> {b.vehicle_type} — {b.vehicle_brand} {b.vehicle_number}
+                    </p>
+                  )}
+                  {b.special_request && (
+                    <p className={`text-xs mt-1 italic ${sub}`}>"{b.special_request}"</p>
+                  )}
                   <div className="flex gap-2 mt-2.5">
                     <button
                       disabled={actioning[b.id]}

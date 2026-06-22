@@ -57,6 +57,7 @@ async def get_my_bookings(user_id: str) -> dict:
         station_name = station_doc.to_dict().get("name", "") if station_doc.exists else ""
 
         service_name = ""
+        service_image = ""
         price = None
         service_id = data.get("service_id")
         if service_id:
@@ -64,6 +65,7 @@ async def get_my_bookings(user_id: str) -> dict:
             if service_doc.exists:
                 service_data = service_doc.to_dict()
                 service_name = service_data.get("name", "")
+                service_image = service_data.get("image_url", "")
                 tier = data.get("tier")
                 tiers = service_data.get("tiers", {})
                 if tier and tiers.get(tier):
@@ -73,6 +75,7 @@ async def get_my_bookings(user_id: str) -> dict:
             "id": doc.id,
             "station_name": station_name,
             "service_name": service_name,
+            "service_image": service_image,
             "price": price,
             **data,
         })

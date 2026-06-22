@@ -7,6 +7,7 @@ async def get_dashboard_stats(user_id: str) -> dict:
     # ── Fetch only this owner's stations ──────────────────
     stations_docs = list(db.collection("stations").where("owner_id", "==", user_id).stream())
     station_ids = [d.id for d in stations_docs]
+    station_names = {d.id: d.to_dict().get("name", "") for d in stations_docs}
 
     # ── Fetch only bookings for this owner's stations ─────
     if station_ids:
@@ -31,7 +32,7 @@ async def get_dashboard_stats(user_id: str) -> dict:
     total_users    = len(users_docs)
 
     todays_earnings = sum(
-        float(b.get("price", 0) or 0)
+        _get_price(b)
         for b in bookings
         if b.get("status") == "completed"
         and str(b.get("travel_date", "")).startswith(today)
@@ -39,13 +40,13 @@ async def get_dashboard_stats(user_id: str) -> dict:
 
     # ── Pending bookings ───────────────────────────────────
     pending_bookings = [
-        _fmt(b) for b in bookings
+        _fmt(b, station_names) for b in bookings
         if b.get("status") == "pending"
     ]
 
     # ── Confirmed bookings ─────────────────────────────────
     confirmed_bookings = [
-        _fmt(b) for b in bookings
+        _fmt(b, station_names) for b in bookings
         if b.get("status") == "confirmed"
     ]
 
@@ -55,7 +56,7 @@ async def get_dashboard_stats(user_id: str) -> dict:
         key=lambda b: b.get("created_at", ""),
         reverse=True
     )
-    recent_bookings = [_fmt(b) for b in sorted_bookings[:10]]
+    recent_bookings = [_fmt(b, station_names) for b in sorted_bookings[:10]]
 
     return {
         "stats": {
@@ -85,17 +86,54 @@ async def update_booking_status(booking_id: str, status: str) -> dict:
     return {"message": f"Booking marked as {status}", "booking_id": booking_id}
 
 
-def _fmt(b: dict) -> dict:
+def _get_price(b: dict) -> float:
+    service_id = b.get("service_id")
+    tier = b.get("tier")
+    if not service_id or not tier:
+        return 0.0
+    service_doc = db.collection("services").document(service_id).get()
+    if not service_doc.exists:
+        return 0.0
+    tiers = service_doc.to_dict().get("tiers", {})
+    tier_data = tiers.get(tier)
+    if not tier_data:
+        return 0.0
+    return float(tier_data.get("price", 0) or 0)
+
+
+def _fmt(b: dict, station_names: dict) -> dict:
+    user_name = "Unknown"
+    user_profile_image = ""
+    user_id = b.get("user_id")
+    if user_id:
+        user_doc = db.collection("users").document(user_id).get()
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            user_name = user_data.get("full_name", "Unknown")
+            user_profile_image = user_data.get("profile_image", "")
+
+    service_name = ""
+    service_id = b.get("service_id")
+    if service_id:
+        service_doc = db.collection("services").document(service_id).get()
+        if service_doc.exists:
+            service_name = service_doc.to_dict().get("name", "")
+
     return {
-        "id":            b.get("id", ""),
-        "user_name":     b.get("user_name", "Unknown"),
-        "service_id":    b.get("service_id", ""),
-        "from_location": b.get("from_location", ""),
-        "to_location":   b.get("to_location", ""),
-        "travel_date":   b.get("travel_date", ""),
-        "travel_time":   b.get("travel_time", ""),
-        "price":         float(b.get("price", 0) or 0),
-        "car":           b.get("car", ""),
-        "status":        b.get("status", ""),
-        "created_at":    b.get("created_at", ""),
+        "id":             b.get("id", ""),
+        "user_name":      user_name,
+        "user_profile_image": user_profile_image,
+        "service_id":     service_id or "",
+        "service_name":   service_name,
+        "station_name":   station_names.get(b.get("station_id", ""), ""),
+        "tier":           b.get("tier", ""),
+        "travel_date":    b.get("travel_date", ""),
+        "travel_time":    b.get("travel_time", ""),
+        "vehicle_type":   b.get("vehicle_type", ""),
+        "vehicle_brand":  b.get("vehicle_brand", ""),
+        "vehicle_number": b.get("vehicle_number", ""),
+        "special_request": b.get("special_request", ""),
+        "price":          _get_price(b),
+        "status":         b.get("status", ""),
+        "created_at":     b.get("created_at", ""),
     }
