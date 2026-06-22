@@ -70,7 +70,32 @@ export default function BookingHistoryScreen() {
   const handleCancel = (bookingId: string) => {
     Alert.alert("Cancel Booking", "Are you sure you want to cancel?", [
       { text: "No" },
-      { text: "Yes", style: "destructive" },
+      {
+        text: "Yes",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const token = await AsyncStorage.getItem("token");
+            const res = await fetch(`${API_BASE}/bookings/${bookingId}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+              setBookings((prev) =>
+                prev.map((b) =>
+                  b.id === bookingId ? { ...b, status: "cancelled" } : b
+                )
+              );
+            } else {
+              Alert.alert("Error", data.detail || "Failed to cancel booking");
+            }
+          } catch (e) {
+            Alert.alert("Error", "Cannot connect to server");
+          }
+        },
+      },
     ]);
   };
 
