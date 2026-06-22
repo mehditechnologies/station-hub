@@ -97,13 +97,13 @@ export default function ProfileSettingsScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          {/* <TouchableOpacity onPress={() => router.back()}>
             <Ionicons
               name="arrow-back"
               size={24}
               color="#1A1A1A"
             />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <Text style={styles.headerTitle}>
             Profile Settings
@@ -178,15 +178,18 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 18,
+    // flexDirection: "row",
+    padding: 10,
+    justifyContent: "center",
     alignItems: "center",
   },
 
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
+    textAlign:"center",
+    marginTop:0,
+    // width:"100%",
   },
 
   profileCard: {

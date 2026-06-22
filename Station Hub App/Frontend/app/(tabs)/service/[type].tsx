@@ -143,21 +143,16 @@ export default function ServicesScreen() {
         contentContainerStyle={{
           paddingBottom: 100,
           paddingHorizontal: 16,
-          paddingTop: 40,
+          paddingTop: 0,
         }}
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
+          
 
           <Text style={styles.headerTitle}>Services</Text>
 
-          <Image
-            source={require("../../../assets/images/johndoe.png")}
-            style={styles.profileImg}
-          />
+          
         </View>
 
         {/* TABS */}
@@ -312,9 +307,10 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 18,
+    marginVertical: 28,
+    // backgroundColor:"red",
   },
 
   headerTitle: {

@@ -99,16 +99,11 @@ export default function Favorites() {
       <SafeAreaView style={{ flex: 1 }}>
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
+          
 
           <Text style={styles.title}>Favorites</Text>
 
-          <Image
-            source={require("../../assets/images/johndoe.png")}
-            style={styles.profile}
-          />
+          
         </View>
 
         {/* SORT + FILTER */}
@@ -198,15 +193,23 @@ export default function Favorites() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#FFF4EC",
   },
+
+  // header: {
+  //   flexDirection: "row",
+  //   justifyContent: "space-between",
+  //   alignItems: "center",
+  //   paddingHorizontal: 15,
+  //   paddingTop: 45,
+  //   paddingBottom: 10,
+  // },
 
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 15,
-    paddingTop: 45,
-    paddingBottom: 10,
+    marginVertical: 28,
   },
 
   title: {
