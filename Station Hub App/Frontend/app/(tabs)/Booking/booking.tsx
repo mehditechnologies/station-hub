@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -24,6 +25,9 @@ type Station = {
   address?: string;
   city?: string;
   image_url?: string;
+  opening?: string;
+  closing?: string;
+  sun_off?: boolean;
 };
 
 export default function BookingScreen() {
@@ -50,6 +54,8 @@ export default function BookingScreen() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   // ── Stations linked to this service ─────────────────────
   const [stations, setStations] = useState<Station[]>([]);
@@ -108,27 +114,82 @@ export default function BookingScreen() {
     fetchStations();
   }, [params.station_ids]);
 
+  useEffect(() => {
+    if (!selectedStationId || !selectedDate) {
+      setBookedSlots([]);
+      return;
+    }
+    const fetchSlots = async () => {
+      setLoadingSlots(true);
+      try {
+        const res = await fetch(
+          `${API_BASE}/bookings/slots?station_id=${selectedStationId}&date=${selectedDate}`,
+        );
+        const data = await res.json();
+        const slots: string[] = data.booked_slots || [];
+        setBookedSlots(slots);
+        // auto-clear selected time if it just became unavailable
+        if (selectedTime && slots.includes(selectedTime)) {
+          setSelectedTime(null);
+        }
+      } catch {
+        setBookedSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+    fetchSlots();
+  }, [selectedStationId, selectedDate]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!selectedStationId || !selectedDate) return;
+      // this runs every time the screen comes into focus
+      const fetchSlots = async () => {
+        setLoadingSlots(true);
+        try {
+          const res = await fetch(
+            `${API_BASE}/bookings/slots?station_id=${selectedStationId}&date=${selectedDate}`,
+          );
+          const data = await res.json();
+          setBookedSlots(data.booked_slots || []);
+        } catch {
+          setBookedSlots([]);
+        } finally {
+          setLoadingSlots(false);
+        }
+      };
+      fetchSlots();
+    }, [selectedStationId, selectedDate]),
+  );
+
   // ── Generate next 14 days for the date picker ───────────
+  const selectedStation = stations.find((s) => s.id === selectedStationId);
   const dates = React.useMemo(() => {
     const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const result = [];
     const today = new Date();
-    for (let i = 0; i < 14; i++) {
+    for (let i = 1; i < 14; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
+      const dayIndex = d.getDay(); // 0 = Sunday
+
+      const isOff = selectedStation?.sun_off && dayIndex === 0; // ← add
+
       result.push({
-        day: dayLabels[d.getDay()],
+        day: dayLabels[dayIndex],
         num: dd,
-        value: `${yyyy}-${mm}-${dd}`, // sent to backend
+        value: `${yyyy}-${mm}-${dd}`,
+        isOff, // ← add
       });
     }
     return result;
-  }, []);
+  }, [selectedStation]); // ← add selectedStation as dependency
 
-  const times = ["10:00 AM", "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM"];
+  // const times = ["10:00 AM", "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM"];
 
   // ── Submit booking ───────────────────────────────────────
   const handleConfirmBooking = async () => {
@@ -189,6 +250,13 @@ export default function BookingScreen() {
         return;
       }
 
+      // after res.ok, before router.push
+      const updatedRes = await fetch(
+        `${API_BASE}/bookings/slots?station_id=${selectedStationId}&date=${selectedDate}`,
+      );
+      const updatedData = await updatedRes.json();
+      setBookedSlots(updatedData.booked_slots || []);
+
       router.push({
         pathname: "/(tabs)/Booking/bookingconfirm",
         params: { booking_id: data.booking?.id || "" },
@@ -200,7 +268,26 @@ export default function BookingScreen() {
     }
   };
 
-  const selectedStation = stations.find((s) => s.id === selectedStationId);
+  const generateTimeSlots = (opening: string, closing: string): string[] => {
+    if (!opening || !closing) return [];
+    const slots: string[] = [];
+    const [openH] = opening.split(":").map(Number);
+    const [closeH] = closing.split(":").map(Number);
+    for (let h = openH; h < closeH; h++) {
+      const hour = h % 12 === 0 ? 12 : h % 12;
+      const ampm = h < 12 ? "AM" : "PM";
+      slots.push(`${hour}:00 ${ampm}`);
+    }
+    return slots;
+  };
+
+  const times = React.useMemo(() => {
+    if (!selectedStation) return [];
+    return generateTimeSlots(
+      selectedStation.opening || "08:00",
+      selectedStation.closing || "18:00",
+    );
+  }, [selectedStation]);
 
   return (
     <LinearGradient
@@ -226,16 +313,12 @@ export default function BookingScreen() {
           <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
             {/* HEADER */}
             <View style={styles.header}>
-              
-
               <Text style={styles.headerTitle}>Book Your Wash</Text>
-
-              
             </View>
 
             {/* SERVICE CARD */}
             <View style={styles.card}>
-            <Text style={styles.eyebrow}>You're Booking</Text>
+              <Text style={styles.eyebrow}>You're Booking</Text>
 
               {params.image_url ? (
                 <Image
@@ -350,23 +433,38 @@ export default function BookingScreen() {
                   style={[
                     styles.dateCard,
                     selectedDate === item.value && styles.activeDate,
+                    item.isOff && styles.disabledDate, // ← add
                   ]}
-                  onPress={() => setSelectedDate(item.value)}
+                  onPress={() => !item.isOff && setSelectedDate(item.value)} // ← add guard
+                  disabled={item.isOff} // ← add
                 >
                   <Text
                     style={{
-                      color: selectedDate === item.value ? "#fff" : "#000",
+                      color:
+                        selectedDate === item.value
+                          ? "#fff"
+                          : item.isOff
+                            ? "#bbb"
+                            : "#000",
                     }}
                   >
                     {item.day}
                   </Text>
                   <Text
                     style={{
-                      color: selectedDate === item.value ? "#fff" : "#000",
+                      color:
+                        selectedDate === item.value
+                          ? "#fff"
+                          : item.isOff
+                            ? "#bbb"
+                            : "#000",
                     }}
                   >
                     {item.num}
                   </Text>
+                  {item.isOff && (
+                    <Text style={{ fontSize: 9, color: "#bbb" }}>Off</Text> // ← add
+                  )}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -374,24 +472,50 @@ export default function BookingScreen() {
             {/* TIME */}
             <Text style={styles.sectionTitle}>Select Time</Text>
 
-            <View style={styles.timeContainer}>
-              {times.map((time) => (
-                <TouchableOpacity
-                  key={time}
-                  style={[
-                    styles.timeBtn,
-                    selectedTime === time && styles.activeTime,
-                  ]}
-                  onPress={() => setSelectedTime(time)}
-                >
-                  <Text
-                    style={{ color: selectedTime === time ? "#fff" : "#000" }}
-                  >
-                    {time}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {loadingSlots ? (
+              <ActivityIndicator
+                color="#FF8C42"
+                style={{ marginLeft: 18, marginTop: 8 }}
+              />
+            ) : (
+              <View style={styles.timeContainer}>
+                {times.map((time) => {
+                  const isBooked = bookedSlots.includes(time);
+                  const isSelected = selectedTime === time;
+                  return (
+                    <TouchableOpacity
+                      key={time}
+                      style={[
+                        styles.timeBtn,
+                        isSelected && styles.activeTime,
+                        isBooked && styles.disabledTime,
+                      ]}
+                      onPress={() => !isBooked && setSelectedTime(time)}
+                      disabled={isBooked}
+                    >
+                      <Text
+                        style={{
+                          color: isBooked
+                            ? "#bbb"
+                            : isSelected
+                              ? "#fff"
+                              : "#000",
+                        }}
+                      >
+                        {time}
+                      </Text>
+                      {isBooked && (
+                        <Text
+                          style={{ fontSize: 9, color: "#bbb", marginTop: 2 }}
+                        >
+                          Booked
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
 
             {/* VEHICLE */}
             <Text style={styles.sectionTitle}>Vehicle Type</Text>
@@ -551,15 +675,13 @@ const styles = StyleSheet.create({
     marginVertical: 28,
   },
 
-  headerTitle: { fontSize: 22,
-    fontWeight: "700",
-    color: "#000", },
+  headerTitle: { fontSize: 22, fontWeight: "700", color: "#000" },
 
   profileImage: { width: 40, height: 40, borderRadius: 20 },
 
   card: {
     marginBottom: 5,
-    marginHorizontal:18,
+    marginHorizontal: 18,
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
@@ -598,8 +720,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginHorizontal: 0,
     marginTop: 0,
-    marginBottom:10,
-    
+    marginBottom: 10,
   },
 
   tierBadge: {
@@ -850,4 +971,14 @@ const styles = StyleSheet.create({
   },
 
   confirmText: { color: "#fff", fontWeight: "700" },
+
+  disabledTime: {
+    backgroundColor: "#f5f5f5",
+    borderColor: "#e0e0e0",
+  },
+  disabledDate: {
+    backgroundColor: "#f0f0f0",
+    borderColor: "#e0e0e0",
+    opacity: 0.5,
+  },
 });

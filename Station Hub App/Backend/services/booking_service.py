@@ -48,40 +48,42 @@ async def create_booking(body: BookingRequest, user_id: str) -> dict:
 
 async def get_my_bookings(user_id: str) -> dict:
     docs = db.collection("bookings").where("user_id", "==", user_id).stream()
+    bookings = [{"id": d.id, **d.to_dict()} for d in docs]
 
-    bookings = []
-    for doc in docs:
-        data = doc.to_dict()
+    if not bookings:
+        return {"bookings": []}
 
-        station_doc = db.collection("stations").document(data["station_id"]).get()
-        station_name = station_doc.to_dict().get("name", "") if station_doc.exists else ""
+    # collect unique IDs
+    station_ids = list({b["station_id"] for b in bookings if b.get("station_id")})
+    service_ids = list({b["service_id"] for b in bookings if b.get("service_id")})
 
-        service_name = ""
-        service_image = ""
-        price = None
-        service_id = data.get("service_id")
-        if service_id:
-            service_doc = db.collection("services").document(service_id).get()
-            if service_doc.exists:
-                service_data = service_doc.to_dict()
-                service_name = service_data.get("name", "")
-                service_image = service_data.get("image_url", "")
-                tier = data.get("tier")
-                tiers = service_data.get("tiers", {})
-                if tier and tiers.get(tier):
-                    price = tiers[tier].get("price")
+    # fetch all stations at once
+    stations = {}
+    for sid in station_ids:
+        doc = db.collection("stations").document(sid).get()
+        if doc.exists:
+            stations[sid] = doc.to_dict()
 
-        bookings.append({
-            "id": doc.id,
-            "station_name": station_name,
-            "service_name": service_name,
-            "service_image": service_image,
-            "price": price,
-            **data,
-        })
+    # fetch all services at once
+    services = {}
+    for sid in service_ids:
+        doc = db.collection("services").document(sid).get()
+        if doc.exists:
+            services[sid] = doc.to_dict()
+
+    # enrich bookings
+    for b in bookings:
+        station = stations.get(b.get("station_id"), {})
+        service = services.get(b.get("service_id"), {})
+        tier = b.get("tier")
+        tiers = service.get("tiers", {})
+
+        b["station_name"] = station.get("name", "")
+        b["service_name"] = service.get("name", "")
+        b["service_image"] = service.get("image_url", "")
+        b["price"] = tiers.get(tier, {}).get("price") if tier and tiers.get(tier) else None
 
     bookings.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-
     return {"bookings": bookings}
 
 
@@ -112,3 +114,36 @@ async def cancel_booking(booking_id: str, user_id: str) -> dict:
     doc_ref.update({"status": "cancelled"})
 
     return {"message": "Booking cancelled"}
+
+async def mark_booking_read(booking_id: str, user_id: str) -> dict:
+    doc_ref = db.collection("bookings").document(booking_id)
+    doc = doc_ref.get()
+
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if doc.to_dict()["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    doc_ref.update({"customer_read": True})
+
+    return {"message": "Marked as read"}
+
+
+async def get_booked_slots(station_id: str, date: str) -> list[str]:
+    excluded_statuses = {"cancelled", "rejected"}
+    docs = db.collection("bookings") \
+        .where("station_id", "==", station_id) \
+        .where("travel_date", "==", date) \
+        .stream()
+    
+    slots = []
+    for doc in docs:
+        data = doc.to_dict()
+        if data.get("status") in excluded_statuses:
+            continue
+        time = data.get("travel_time")
+        if time:
+            slots.append(time)
+    
+    return slots

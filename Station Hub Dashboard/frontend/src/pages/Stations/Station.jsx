@@ -248,10 +248,8 @@ const EMPTY_FORM = {
   city: "",
   category: "",
   status: "Active",
-  mon_fri_open: "08:00",
-  mon_fri_close: "18:00",
-  sat_open: "09:00",
-  sat_close: "17:00",
+  opening: "08:00",
+  closing: "18:00",
   sun_off: true,
   break_start: "13:00",
   break_end: "14:00",
@@ -661,8 +659,8 @@ const StationForm = ({
                 Mon – Fri
               </span>
               <select
-                value={form.mon_fri_open}
-                onChange={(e) => set("mon_fri_open", e.target.value)}
+                value={form.opening}
+                onChange={(e) => set("opening", e.target.value)}
                 className={`flex-1 px-2 py-1.5 text-xs border rounded-lg outline-none ${sel}`}
               >
                 {ALL_TIMES.map((t) => (
@@ -671,8 +669,8 @@ const StationForm = ({
               </select>
               <span className={`text-xs ${sub}`}>—</span>
               <select
-                value={form.mon_fri_close}
-                onChange={(e) => set("mon_fri_close", e.target.value)}
+                value={form.closing}
+                onChange={(e) => set("closing", e.target.value)}
                 className={`flex-1 px-2 py-1.5 text-xs border rounded-lg outline-none ${sel}`}
               >
                 {ALL_TIMES.map((t) => (
@@ -681,31 +679,7 @@ const StationForm = ({
               </select>
             </div>
 
-            {/* Saturday */}
-            <div className="flex items-center gap-3">
-              <span className={`text-xs w-20 flex-shrink-0 ${sub}`}>
-                Saturday
-              </span>
-              <select
-                value={form.sat_open}
-                onChange={(e) => set("sat_open", e.target.value)}
-                className={`flex-1 px-2 py-1.5 text-xs border rounded-lg outline-none ${sel}`}
-              >
-                {ALL_TIMES.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-              <span className={`text-xs ${sub}`}>—</span>
-              <select
-                value={form.sat_close}
-                onChange={(e) => set("sat_close", e.target.value)}
-                className={`flex-1 px-2 py-1.5 text-xs border rounded-lg outline-none ${sel}`}
-              >
-                {ALL_TIMES.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </div>
+            
 
             {/* Sunday */}
             <div className="flex items-center gap-3">
@@ -1116,10 +1090,8 @@ const Stations = () => {
                 city: stn.city || "",
                 category: stn.category || "",
                 status: stn.status || "Active",
-                mon_fri_open: stn.mon_fri_open || "08:00",
-                mon_fri_close: stn.mon_fri_close || "18:00",
-                sat_open: stn.sat_open || "09:00",
-                sat_close: stn.sat_close || "17:00",
+                opening: stn.opening || "08:00",
+                closing: stn.closing || "18:00",
                 sun_off: stn.sun_off ?? true,
                 break_start: stn.break_start || "13:00",
                 break_end: stn.break_end || "14:00",
@@ -1257,7 +1229,7 @@ const Stations = () => {
               )}
 
               {/* Working Hours */}
-              {stn.mon_fri_open && (
+              {stn.opening && (
                 <div
                   className={`flex items-start gap-1.5 text-xs mb-1.5 ${D ? "text-gray-400" : "text-gray-500"}`}
                 >
@@ -1266,10 +1238,7 @@ const Stations = () => {
                   </span>
                   <div className="flex flex-col gap-0.5">
                     <span>
-                      Mon–Fri: {stn.mon_fri_open} — {stn.mon_fri_close}
-                    </span>
-                    <span>
-                      Saturday: {stn.sat_open} — {stn.sat_close}
+                      Mon–Sat: {stn.opening} — {stn.closing}
                     </span>
                     <span>
                       Sunday:{" "}

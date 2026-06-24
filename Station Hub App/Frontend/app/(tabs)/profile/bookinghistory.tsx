@@ -22,7 +22,10 @@ const TAB_STATUS_MAP: Record<string, string[]> = {
   closed: ["cancelled", "rejected"],
 };
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+const STATUS_STYLES: Record<
+  string,
+  { bg: string; text: string; label: string }
+> = {
   pending: { bg: "#FEF3C7", text: "#B45309", label: "Pending" },
   confirmed: { bg: "#D1FAE5", text: "#047857", label: "Confirmed" },
   completed: { bg: "#D1FAE5", text: "#047857", label: "Completed" },
@@ -44,17 +47,32 @@ export default function BookingHistoryScreen() {
       setError("");
       try {
         const token = await AsyncStorage.getItem("token");
+
+        // show cached data instantly
+        const cached = await AsyncStorage.getItem("cached_bookings");
+        if (cached) {
+          setBookings(JSON.parse(cached));
+          setLoading(false); // stop spinner, show cached data
+        }
+
+        // fetch fresh in background
         const res = await fetch(`${API_BASE}/bookings/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         if (res.ok) {
           setBookings(data.bookings || []);
+          AsyncStorage.setItem(
+            "cached_bookings",
+            JSON.stringify(data.bookings || []),
+          );
         } else {
-          setError(data.detail || "Failed to load bookings");
+          if (!cached) setError(data.detail || "Failed to load bookings");
         }
       } catch (e) {
-        setError("Cannot connect to server");
+        if (!(await AsyncStorage.getItem("cached_bookings"))) {
+          setError("Cannot connect to server");
+        }
       } finally {
         setLoading(false);
       }
@@ -64,7 +82,7 @@ export default function BookingHistoryScreen() {
   }, []);
 
   const filteredData = bookings.filter((item) =>
-    (TAB_STATUS_MAP[activeTab] || []).includes(item.status)
+    (TAB_STATUS_MAP[activeTab] || []).includes(item.status),
   );
 
   const handleCancel = (bookingId: string) => {
@@ -85,8 +103,8 @@ export default function BookingHistoryScreen() {
             if (res.ok) {
               setBookings((prev) =>
                 prev.map((b) =>
-                  b.id === bookingId ? { ...b, status: "cancelled" } : b
-                )
+                  b.id === bookingId ? { ...b, status: "cancelled" } : b,
+                ),
               );
             } else {
               Alert.alert("Error", data.detail || "Failed to cancel booking");
@@ -123,10 +141,7 @@ export default function BookingHistoryScreen() {
           <TouchableOpacity
             key={tab}
             onPress={() => setActiveTab(tab)}
-            style={[
-              styles.tab,
-              activeTab === tab && styles.activeTab,
-            ]}
+            style={[styles.tab, activeTab === tab && styles.activeTab]}
           >
             <Text
               style={[
@@ -137,8 +152,8 @@ export default function BookingHistoryScreen() {
               {tab === "upcoming"
                 ? "Up-Coming"
                 : tab === "completed"
-                ? "Completed"
-                : "Closed"}
+                  ? "Completed"
+                  : "Closed"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -161,8 +176,8 @@ export default function BookingHistoryScreen() {
                 activeTab === "completed"
                   ? "checkmark-circle-outline"
                   : activeTab === "closed"
-                  ? "close-circle-outline"
-                  : "time-outline"
+                    ? "close-circle-outline"
+                    : "time-outline"
               }
               size={60}
               color="#FF7A45"
@@ -172,8 +187,8 @@ export default function BookingHistoryScreen() {
               {activeTab === "completed"
                 ? "No completed bookings yet"
                 : activeTab === "closed"
-                ? "No cancelled or rejected bookings"
-                : "No upcoming bookings yet"}
+                  ? "No cancelled or rejected bookings"
+                  : "No upcoming bookings yet"}
             </Text>
 
             <Text style={styles.emptySub}>
@@ -211,24 +226,41 @@ export default function BookingHistoryScreen() {
                   <View style={styles.row}>
                     <Ionicons name="car-outline" size={14} color="#6B7280" />
                     <Text style={styles.text}>
-                      {item.vehicle_brand} {item.vehicle_number ? `, ${item.vehicle_number}` : ""}
+                      {item.vehicle_brand}{" "}
+                      {item.vehicle_number ? `, ${item.vehicle_number}` : ""}
                     </Text>
                   </View>
 
                   <View style={styles.row}>
-                    <Ionicons name="calendar-outline" size={14} color="#6B7280" />
+                    <Ionicons
+                      name="calendar-outline"
+                      size={14}
+                      color="#6B7280"
+                    />
                     <Text style={styles.text}>
                       {item.travel_date} • {item.travel_time}
                     </Text>
                   </View>
 
                   {item.price != null && (
-                    <Text style={styles.price}>Total Payment $ {item.price}</Text>
+                    <Text style={styles.price}>
+                      Total Payment $ {item.price}
+                    </Text>
                   )}
 
                   <View style={styles.bottomRow}>
-                    <View style={[styles.statusCapsule, { backgroundColor: statusStyle.bg }]}>
-                      <Text style={[styles.statusCapsuleText, { color: statusStyle.text }]}>
+                    <View
+                      style={[
+                        styles.statusCapsule,
+                        { backgroundColor: statusStyle.bg },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusCapsuleText,
+                          { color: statusStyle.text },
+                        ]}
+                      >
                         {statusStyle.label}
                       </Text>
                     </View>
@@ -275,7 +307,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     width: "100%",
-    paddingRight:38,
+    paddingRight: 38,
   },
 
   avatar: {

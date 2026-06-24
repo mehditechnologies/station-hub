@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { useRouter } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
 
@@ -25,6 +27,7 @@ export default function HomeScreen() {
   const [loadingStations, setLoadingStations] = useState(true);
   const [stationsError, setStationsError] = useState("");
   const [sortBy, setSortBy] = useState("newest"); // "newest" | "rated" | "nearest" | "popular"
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const fetchStations = async () => {
@@ -45,6 +48,30 @@ export default function HomeScreen() {
       }
     };
     fetchStations();
+  }, []);
+
+
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (!token) return;
+        const res = await fetch(`${API_BASE}/bookings/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const unread = (data.bookings || []).filter(
+            (b: any) => b.status !== "pending" && !b.customer_read
+          );
+          setUnreadCount(unread.length);
+        }
+      } catch (e) {
+        // silently ignore — badge just won't show
+      }
+    };
+    fetchUnreadCount();
   }, []);
 
   const sortOptions = [
@@ -90,13 +117,20 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.iconSection}>
-            <Ionicons name="search-outline" size={24} color="#333" />
-            <Ionicons
-              name="notifications-outline"
-              size={24}
-              color="#333"
+            {/* <Ionicons name="search-outline" size={24} color="#333" /> */}
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/Home/notifications")}
               style={{ marginLeft: 15 }}
-            />
+            >
+              <Ionicons name="notifications-outline" size={24} color="#333" />
+              {unreadCount > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -237,7 +271,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 18,
-    paddingTop: 45,
+    paddingTop: 15,
     paddingBottom: 10,
   },
 
@@ -379,5 +413,24 @@ const styles = StyleSheet.create({
   ratingStar: {
     fontSize: 13,
     color: "#FFB400",
+  },
+
+  notifBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#FF3B30",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+
+  notifBadgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "700",
   },
 });
