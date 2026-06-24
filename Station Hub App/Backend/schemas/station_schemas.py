@@ -10,3 +10,6 @@ class StationRequest(BaseModel):
     longitude: Optional[float] = None
     image: Optional[str] = None
     amenities: Optional[List[str]] = []
+
+class RatingRequest(BaseModel):
+    rating: int

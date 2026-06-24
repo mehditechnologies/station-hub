@@ -28,6 +28,7 @@ export default function HomeScreen() {
   const [stationsError, setStationsError] = useState("");
   const [sortBy, setSortBy] = useState("newest"); // "newest" | "rated" | "nearest" | "popular"
   const [unreadCount, setUnreadCount] = useState(0);
+  const [userCity, setUserCity] = useState("Your Location");
 
   useEffect(() => {
     const fetchStations = async () => {
@@ -74,6 +75,14 @@ export default function HomeScreen() {
     fetchUnreadCount();
   }, []);
 
+  useEffect(() => {
+  const loadCity = async () => {
+    const city = await AsyncStorage.getItem("user_city");
+    if (city) setUserCity(city);
+  };
+  loadCity();
+}, []);
+
   const sortOptions = [
     { key: "newest", label: "Newest" },
     { key: "rated", label: "Top Rated" },
@@ -111,7 +120,7 @@ export default function HomeScreen() {
               <View style={styles.location}>
                 <Ionicons name="location-sharp" size={15} color="#FF7A45" />
 
-                <Text style={styles.locationText}>Brooklyn, New York</Text>
+                <Text style={styles.locationText}>{userCity}</Text>
               </View>
             </View>
           </View>

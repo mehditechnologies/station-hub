@@ -13,7 +13,10 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; label: string; icon: any; accent: string }> = {
+const STATUS_STYLES: Record<
+  string,
+  { bg: string; text: string; label: string; icon: any; accent: string }
+> = {
   confirmed: {
     bg: "#D1FAE5",
     text: "#047857",
@@ -53,21 +56,35 @@ export default function NotificationsScreen() {
   const [error, setError] = useState("");
 
   const fetchBookings = async () => {
-    setLoading(true);
     setError("");
     try {
       const token = await AsyncStorage.getItem("token");
+
+      // show cached data instantly
+      const cached = await AsyncStorage.getItem("cached_notifications");
+      if (cached) {
+        setBookings(JSON.parse(cached));
+        setLoading(false);
+      }
+
+      // fetch fresh in background
       const res = await fetch(`${API_BASE}/bookings/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (res.ok) {
         setBookings(data.bookings || []);
+        AsyncStorage.setItem(
+          "cached_notifications",
+          JSON.stringify(data.bookings || []),
+        );
       } else {
-        setError(data.detail || "Failed to load notifications");
+        if (!cached) setError(data.detail || "Failed to load notifications");
       }
     } catch (e) {
-      setError("Cannot connect to server");
+      if (!(await AsyncStorage.getItem("cached_notifications"))) {
+        setError("Cannot connect to server");
+      }
     } finally {
       setLoading(false);
     }
@@ -88,9 +105,13 @@ export default function NotificationsScreen() {
 
   const handleMarkRead = async (bookingId: string) => {
     // optimistic update
-    setBookings((prev) =>
-      prev.map((b) => (b.id === bookingId ? { ...b, customer_read: true } : b))
-    );
+    setBookings((prev) => {
+      const updated = prev.map((b) =>
+        b.id === bookingId ? { ...b, customer_read: true } : b,
+      );
+      AsyncStorage.setItem("cached_notifications", JSON.stringify(updated)); // ← keep cache in sync
+      return updated;
+    });
 
     try {
       const token = await AsyncStorage.getItem("token");
@@ -99,19 +120,25 @@ export default function NotificationsScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        // revert on failure
-        setBookings((prev) =>
-          prev.map((b) =>
-            b.id === bookingId ? { ...b, customer_read: false } : b
-          )
-        );
+        setBookings((prev) => {
+          const reverted = prev.map((b) =>
+            b.id === bookingId ? { ...b, customer_read: false } : b,
+          );
+          AsyncStorage.setItem(
+            "cached_notifications",
+            JSON.stringify(reverted),
+          );
+          return reverted;
+        });
       }
     } catch (e) {
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.id === bookingId ? { ...b, customer_read: false } : b
-        )
-      );
+      setBookings((prev) => {
+        const reverted = prev.map((b) =>
+          b.id === bookingId ? { ...b, customer_read: false } : b,
+        );
+        AsyncStorage.setItem("cached_notifications", JSON.stringify(reverted));
+        return reverted;
+      });
     }
   };
 
@@ -125,7 +152,10 @@ export default function NotificationsScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          >
             <Ionicons name="arrow-back" size={22} color="#000" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Notifications</Text>
@@ -191,18 +221,25 @@ export default function NotificationsScreen() {
 
             return (
               <View key={item.id} style={styles.row}>
-                <View style={[styles.accentBar, { backgroundColor: statusStyle.accent }]} />
+                <View
+                  style={[
+                    styles.accentBar,
+                    { backgroundColor: statusStyle.accent },
+                  ]}
+                />
 
                 <View style={styles.rowContent}>
                   <View style={styles.rowTop}>
-                    
-
                     <View style={{ flex: 1, marginLeft: 10 }}>
                       <Text style={styles.serviceName} numberOfLines={1}>
                         {item.service_name || "Service"}
                       </Text>
                       <View style={styles.stationRow}>
-                        <Ionicons name="location-sharp" size={11} color="#999" />
+                        <Ionicons
+                          name="location-sharp"
+                          size={11}
+                          color="#999"
+                        />
                         <Text style={styles.stationText} numberOfLines={1}>
                           {item.station_name || "Station"}
                         </Text>
@@ -212,15 +249,29 @@ export default function NotificationsScreen() {
                     {!item.customer_read && <View style={styles.unreadDot} />}
                   </View>
 
-                  <View style={[styles.statusCapsule, { backgroundColor: statusStyle.bg }]}>
-                    <Text style={[styles.statusCapsuleText, { color: statusStyle.text }]}>
+                  <View
+                    style={[
+                      styles.statusCapsule,
+                      { backgroundColor: statusStyle.bg },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusCapsuleText,
+                        { color: statusStyle.text },
+                      ]}
+                    >
                       {statusStyle.label}
                     </Text>
                   </View>
 
                   <View style={styles.rowBottom}>
                     <View style={styles.dateRow}>
-                      <Ionicons name="calendar-outline" size={12} color="#999" />
+                      <Ionicons
+                        name="calendar-outline"
+                        size={12}
+                        color="#999"
+                      />
                       <Text style={styles.rowDate}>
                         {item.travel_date} • {item.travel_time}
                       </Text>

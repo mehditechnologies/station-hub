@@ -10,6 +10,8 @@ import {
   Dimensions,
   ActivityIndicator,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { decode } from "base-64";   // ← add this line
 
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
@@ -31,17 +33,54 @@ export default function StationDetail() {
     null,
   );
 
+  const [userRating, setUserRating] = useState<number>(0);
+  const [avgRating, setAvgRating] = useState<number>(0);
+  const [ratingCount, setRatingCount] = useState<number>(0);
+  const [selectedRating, setSelectedRating] = useState<number>(0);
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [ratingMsg, setRatingMsg] = useState("");
+  const [reRating, setReRating] = useState(false);
+
   useEffect(() => {
+    if (!station_id) return;
+
     const fetchStation = async () => {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`${API_BASE}/stations/public/${station_id}`);
-        const data = await res.json();
-        if (res.ok) {
-          setStation(data.station);
+        
+        // fetch both at the same time
+        const [stationRes, servicesRes] = await Promise.all([
+          fetch(`${API_BASE}/stations/public/${station_id}`),
+          fetch(`${API_BASE}/services/public/station/${station_id}`),
+        ]);
+
+        const stationData = await stationRes.json();
+        const servicesData = await servicesRes.json();
+
+        if (stationRes.ok) {
+          const s = stationData.station;
+          setStation(s);
+          setAvgRating(s.avg_rating || 0);
+          setRatingCount(s.rating_count || 0);
+
+          // check if current user already rated
+          const token = await AsyncStorage.getItem("token");
+          if (token) {
+            const payload = JSON.parse(decode(token.split(".")[1]));
+            const userId = payload.sub;
+            const existingRating = s.ratings?.[userId];
+            if (existingRating) {
+              setUserRating(existingRating);
+              setSelectedRating(existingRating);
+            }
+          }
         } else {
-          setError(data.detail || "Failed to load station");
+          setError(stationData.detail || "Failed to load station");
+        }
+
+        if (servicesRes.ok) {
+          setServices(servicesData.services || []);
         }
       } catch (e) {
         setError("Cannot connect to server");
@@ -50,24 +89,7 @@ export default function StationDetail() {
       }
     };
 
-    const fetchServices = async () => {
-      try {
-        const res = await fetch(
-          `${API_BASE}/services/public/station/${station_id}`,
-        );
-        const data = await res.json();
-        if (res.ok) {
-          setServices(data.services || []);
-        }
-      } catch (e) {
-        // silently ignore — station details still show without services
-      }
-    };
-
-    if (station_id) {
-      fetchStation();
-      fetchServices();
-    }
+    fetchStation();
   }, [station_id]);
 
   const toggleExpand = (serviceId: string) => {
@@ -111,6 +133,37 @@ export default function StationDetail() {
     );
   }
 
+  const submitRating = async () => {
+    if (!selectedRating) return;
+    setSubmittingRating(true);
+    setRatingMsg("");
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/stations/${station_id}/rate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ rating: selectedRating }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUserRating(selectedRating);
+        setAvgRating(data.avg_rating);
+        setRatingCount(data.rating_count);
+        setReRating(false);
+        setRatingMsg("Thanks for your rating!");
+      } else {
+        setRatingMsg(data.detail || "Failed to submit rating");
+      }
+    } catch (e) {
+      setRatingMsg("Cannot connect to server");
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FDE9E6" />
@@ -144,9 +197,18 @@ export default function StationDetail() {
 
           <View style={styles.row}>
             {[1, 2, 3, 4, 5].map((i) => (
-              <Ionicons key={i} name="star" size={16} color="#F97316" />
+              <Ionicons
+                key={i}
+                name={i <= Math.round(avgRating) ? "star" : "star-outline"}
+                size={16}
+                color="#F97316"
+              />
             ))}
-            <Text style={{ marginLeft: 6, fontSize: 12 }}>25</Text>
+            <Text style={{ marginLeft: 6, fontSize: 12 }}>
+              {avgRating > 0
+                ? `${avgRating} (${ratingCount})`
+                : "No ratings yet"}
+            </Text>
           </View>
 
           {locationLabel ? (
@@ -174,7 +236,7 @@ export default function StationDetail() {
             services.map((service) => {
               const isExpanded = expandedServiceId === service.id;
               const availableTiers = Object.keys(service.tiers || {}).filter(
-                (key) => service.tiers[key]
+                (key) => service.tiers[key],
               ) as Array<"base" | "premium">;
 
               return (
@@ -183,7 +245,9 @@ export default function StationDetail() {
                     style={styles.serviceAccordionHeader}
                     onPress={() => toggleExpand(service.id)}
                   >
-                    <Text style={styles.serviceAccordionName}>{service.name}</Text>
+                    <Text style={styles.serviceAccordionName}>
+                      {service.name}
+                    </Text>
                     <Ionicons
                       name={isExpanded ? "chevron-up" : "chevron-down"}
                       size={18}
@@ -237,6 +301,89 @@ export default function StationDetail() {
         {/* <TouchableOpacity style={styles.button}>
           <Text style={styles.buttonText}>Schedule</Text>
         </TouchableOpacity> */}
+        {/* RATING SECTION */}
+        <View style={styles.ratingCard}>
+          <Text style={styles.ratingTitle}>Rate this Station</Text>
+
+          {userRating > 0 && !reRating ? (
+            // already rated
+            <View style={{ alignItems: "center" }}>
+              <Text style={styles.ratingDoneText}>
+                You rated this station {userRating} star
+                {userRating > 1 ? "s" : ""}
+              </Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Ionicons
+                    key={i}
+                    name={i <= userRating ? "star" : "star-outline"}
+                    size={28}
+                    color="#F97316"
+                  />
+                ))}
+              </View>
+              <TouchableOpacity
+                style={styles.reRateBtn}
+                onPress={() => setReRating(true)}
+              >
+                <Text style={styles.reRateText}>Rate Again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            // not yet rated or re-rating
+            <View style={{ alignItems: "center" }}>
+              <Text style={styles.ratingSubText}>
+                {reRating ? "Update your rating:" : "Tap a star to rate:"}
+              </Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => setSelectedRating(i)}
+                  >
+                    <Ionicons
+                      name={i <= selectedRating ? "star" : "star-outline"}
+                      size={32}
+                      color="#F97316"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {ratingMsg ? (
+                <Text style={styles.ratingMsg}>{ratingMsg}</Text>
+              ) : null}
+
+              <TouchableOpacity
+                style={[
+                  styles.submitRatingBtn,
+                  !selectedRating && { opacity: 0.5 },
+                ]}
+                onPress={submitRating}
+                disabled={!selectedRating || submittingRating}
+              >
+                {submittingRating ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.submitRatingText}>
+                    {reRating ? "Update Rating" : "Submit Rating"}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              {reRating && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setReRating(false);
+                    setSelectedRating(userRating);
+                  }}
+                >
+                  <Text style={styles.cancelReRateText}>Cancel</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       <Bottomnav />
@@ -441,5 +588,82 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 13,
     fontWeight: "600",
+  },
+
+  ratingCard: {
+    backgroundColor: "#fff",
+    margin: 16,
+    padding: 16,
+    borderRadius: 16,
+  },
+
+  ratingTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+
+  ratingSubText: {
+    fontSize: 13,
+    color: "#888",
+    marginBottom: 10,
+  },
+
+  ratingDoneText: {
+    fontSize: 13,
+    color: "#444",
+    fontWeight: "600",
+    marginBottom: 10,
+  },
+
+  starsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+
+  ratingMsg: {
+    fontSize: 13,
+    color: "#10B981",
+    fontWeight: "600",
+    marginBottom: 10,
+  },
+
+  submitRatingBtn: {
+    backgroundColor: "#F97316",
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 4,
+  },
+
+  submitRatingText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+
+  reRateBtn: {
+    borderWidth: 1,
+    borderColor: "#F97316",
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+
+  reRateText: {
+    color: "#F97316",
+    fontWeight: "600",
+    fontSize: 13,
+  },
+
+  cancelReRateText: {
+    color: "#888",
+    fontSize: 13,
+    marginTop: 10,
   },
 });

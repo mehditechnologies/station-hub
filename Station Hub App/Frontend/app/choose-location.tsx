@@ -4,6 +4,7 @@ import MapView from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ChooseLocationScreen() {
   const router = useRouter();
@@ -12,11 +13,18 @@ export default function ChooseLocationScreen() {
     longitude: number;
   } | null>(null);
 
+  const [region, setRegion] = useState({
+    latitude: 37.78825,
+    longitude: -122.4324,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  });
+
+  const [cityName, setCityName] = useState<string>("");
+
   const getLocation = async () => {
     try {
-      const { status } =
-        await Location.requestForegroundPermissionsAsync();
-
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         alert("Permission denied!");
         return;
@@ -26,71 +34,75 @@ export default function ChooseLocationScreen() {
         accuracy: Location.Accuracy.High,
       });
 
-      setLocation({
+      const coords = {
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
+      };
+      setLocation(coords);
+
+      // ← update map region to center on user
+      setRegion({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
       });
+
+      // reverse geocode
+      const [place] = await Location.reverseGeocodeAsync(coords);
+      const city = place?.city || place?.district || place?.region || "Unknown";
+      setCityName(city);
     } catch (error) {
-      console.log(error);
       alert("Could not get location");
     }
   };
 
-  const handleConfirmLocation = () => {
-  router.replace("/(tabs)/Home/home");
-};
+  const handleConfirmLocation = async () => {
+    if (cityName) {
+      await AsyncStorage.setItem("user_city", cityName);
+    }
+    router.replace("/(tabs)/Home/home");
+  };
 
   return (
     <View style={styles.container}>
       {/* MAP */}
-      <MapView style={styles.map} showsUserLocation />
+      <MapView
+        style={styles.map}
+        region={region} // ← controlled region
+        showsUserLocation // ← shows blue dot
+        showsMyLocationButton // ← shows the GPS button
+      />
 
       {/* LOCATION BUTTON */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={getLocation}
-      >
-        <Ionicons
-          name="location-sharp"
-          size={18}
-          color="#fff"
-        />
-        <Text style={styles.buttonText}>
-          Use Current Location
-        </Text>
+      <TouchableOpacity style={styles.button} onPress={getLocation}>
+        <Ionicons name="location-sharp" size={18} color="#fff" />
+        <Text style={styles.buttonText}>Use Current Location</Text>
       </TouchableOpacity>
 
       {/* BOTTOM SHEET */}
       <View style={styles.bottomSheet}>
-        <Text style={styles.title}>
-          Confirm Location
-        </Text>
+        <Text style={styles.title}>Confirm Location</Text>
 
         <Text style={styles.address}>
-          {location
-            ? `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
-            : "Getting your location..."}
+          {cityName
+            ? cityName
+            : location
+              ? `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
+              : "Getting your location..."}
         </Text>
 
-        <Text style={styles.subTitle}>
-          Nearby Stations
-        </Text>
+        <Text style={styles.subTitle}>Nearby Stations</Text>
 
-        <Text style={styles.item}>
-          • Riverside Detailing
-        </Text>
+        <Text style={styles.item}>• Riverside Detailing</Text>
 
-        <Text style={styles.item}>
-          • Brookside Car Care
-        </Text>
+        <Text style={styles.item}>• Brookside Car Care</Text>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.confirmBtn}
           onPress={handleConfirmLocation}
         >
-          <Text style={styles.confirmText}>
-            Confirm Location
-          </Text>
+          <Text style={styles.confirmText}>Confirm Location</Text>
         </TouchableOpacity>
       </View>
     </View>

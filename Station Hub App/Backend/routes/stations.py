@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, Query
 from middleware.auth_middleware import get_current_user
 from schemas.station_schemas import StationRequest
 import services.station_service as station_service
+from schemas.station_schemas import StationRequest, RatingRequest
 
 router = APIRouter(prefix="/stations", tags=["Stations"])
+
+
 
 
 @router.get("/")
@@ -31,3 +34,7 @@ async def get_station(station_id: str, current_user: dict = Depends(get_current_
 @router.post("/")
 async def add_station(body: StationRequest, current_user: dict = Depends(get_current_user)):
     return await station_service.add_station(body)
+
+@router.post("/{station_id}/rate")
+async def rate_station(station_id: str, body: RatingRequest, current_user: dict = Depends(get_current_user)):
+    return await station_service.rate_station(station_id, current_user["sub"], body.rating)

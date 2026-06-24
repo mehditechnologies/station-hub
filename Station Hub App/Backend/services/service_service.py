@@ -62,11 +62,18 @@ async def get_services_for_station(station_id: str) -> dict:
     if not service_ids:
         return {"services": []}
 
-    services = []
-    for sid in service_ids:
+    # fetch all at once using threads instead of one by one
+    import concurrent.futures
+
+    def fetch_service(sid):
         doc = db.collection("services").document(sid).get()
         if doc.exists:
-            services.append({"id": doc.id, **doc.to_dict()})
+            return {"id": doc.id, **doc.to_dict()}
+        return None
 
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        results = list(executor.map(fetch_service, service_ids))
+
+    services = [s for s in results if s]
     services.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return {"services": services}

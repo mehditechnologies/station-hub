@@ -24,24 +24,36 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchUser = async () => {
-    setLoading(true);
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) {
         setUser(null);
+        setLoading(false);
         return;
       }
+
+      // show cached user instantly
+      const cached = await AsyncStorage.getItem("cached_user");
+      if (cached) {
+        setUser(JSON.parse(cached));
+        setLoading(false); // stop spinner, show cached user immediately
+      }
+
+      // fetch fresh in background
       const res = await fetch(`${API_BASE}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (res.ok) {
         setUser(data.user);
+        AsyncStorage.setItem("cached_user", JSON.stringify(data.user));
       } else {
-        setUser(null);
+        if (!cached) setUser(null);
       }
     } catch (e) {
-      setUser(null);
+      if (!(await AsyncStorage.getItem("cached_user"))) {
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -52,11 +64,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateUser = (updates: Partial<UserProfile>) => {
-    setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updates };
+      AsyncStorage.setItem("cached_user", JSON.stringify(updated)); // ← keep cache in sync
+      return updated;
+    });
   };
 
   return (
-    <UserContext.Provider value={{ user, loading, refreshUser: fetchUser, updateUser }}>
+    <UserContext.Provider
+      value={{ user, loading, refreshUser: fetchUser, updateUser }}
+    >
       {children}
     </UserContext.Provider>
   );
