@@ -52,29 +52,53 @@ export default function ServicesScreen() {
       setLoading(true);
       setError("");
       try {
-        const servicesRes = await fetch(`${API_BASE}/services/public`);
-        const servicesData = await servicesRes.json();
-        if (servicesRes.ok) {
-          setServices(servicesData.services || []);
-        } else {
-          setError(servicesData.detail || "Failed to load services");
+        // show cached data instantly
+        const cachedServices = await AsyncStorage.getItem("cached_services");
+        const cachedFavs = await AsyncStorage.getItem("cached_favorites");
+        if (cachedServices) {
+          setServices(JSON.parse(cachedServices));
+          setLoading(false);
+        }
+        if (cachedFavs) {
+          setFavoriteKeys(new Set(JSON.parse(cachedFavs)));
         }
 
         const token = await AsyncStorage.getItem("token");
-        if (token) {
-          const favRes = await fetch(`${API_BASE}/favorites/`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (favRes.ok) {
-            const favData = await favRes.json();
-            const keys = new Set<string>(
-              (favData.services || []).map((s: any) => `${s.id}_${s.tier}`),
-            );
-            setFavoriteKeys(keys);
-          }
+
+        // fetch both at the same time
+        const [servicesRes, favRes] = await Promise.all([
+          fetch(`${API_BASE}/services/public`),
+          token
+            ? fetch(`${API_BASE}/favorites/`, {
+                headers: { Authorization: `Bearer ${token}` },
+              })
+            : Promise.resolve(null),
+        ]);
+
+        const servicesData = await servicesRes.json();
+        if (servicesRes.ok) {
+          setServices(servicesData.services || []);
+          AsyncStorage.setItem(
+            "cached_services",
+            JSON.stringify(servicesData.services || []),
+          );
+        } else {
+          if (!cachedServices)
+            setError(servicesData.detail || "Failed to load services");
+        }
+
+        if (favRes && favRes.ok) {
+          const favData = await favRes.json();
+          const keys = (favData.services || []).map(
+            (s: any) => `${s.id}_${s.tier}`,
+          );
+          setFavoriteKeys(new Set(keys));
+          AsyncStorage.setItem("cached_favorites", JSON.stringify(keys));
         }
       } catch (e) {
-        setError("Cannot connect to server");
+        if (!(await AsyncStorage.getItem("cached_services"))) {
+          setError("Cannot connect to server");
+        }
       } finally {
         setLoading(false);
       }
@@ -148,11 +172,7 @@ export default function ServicesScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          
-
           <Text style={styles.headerTitle}>Services</Text>
-
-          
         </View>
 
         {/* TABS */}

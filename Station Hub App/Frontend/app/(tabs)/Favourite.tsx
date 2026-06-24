@@ -16,8 +16,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
 import { API_BASE } from "../../src/config"; // adjust relative path as needed
 
-
-
 // const API_BASE = "http://192.168.1.10:8000";
 
 type Tier = { price: number; duration: string };
@@ -39,7 +37,6 @@ export default function Favorites() {
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const fetchFavorites = async () => {
-    setLoading(true);
     setError("");
     try {
       const token = await AsyncStorage.getItem("token");
@@ -48,17 +45,32 @@ export default function Favorites() {
         setServices([]);
         return;
       }
+
+      // show cached data instantly
+      const cached = await AsyncStorage.getItem("cached_favorites_full");
+      if (cached) {
+        setServices(JSON.parse(cached));
+        setLoading(false);
+      }
+
+      // fetch fresh in background
       const res = await fetch(`${API_BASE}/favorites/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (res.ok) {
         setServices(data.services || []);
+        AsyncStorage.setItem(
+          "cached_favorites_full",
+          JSON.stringify(data.services || []),
+        );
       } else {
-        setError(data.detail || "Failed to load favorites");
+        if (!cached) setError(data.detail || "Failed to load favorites");
       }
     } catch (e) {
-      setError("Cannot connect to server");
+      if (!(await AsyncStorage.getItem("cached_favorites_full"))) {
+        setError("Cannot connect to server");
+      }
     } finally {
       setLoading(false);
     }
@@ -69,7 +81,7 @@ export default function Favorites() {
   useFocusEffect(
     useCallback(() => {
       fetchFavorites();
-    }, [])
+    }, []),
   );
 
   const handleUnfavorite = async (serviceId: string, tier: string) => {
@@ -81,9 +93,13 @@ export default function Favorites() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      setServices((prev) =>
-        prev.filter((s) => !(s.id === serviceId && s.tier === tier))
-      );
+      setServices((prev) => {
+        const updated = prev.filter(
+          (s) => !(s.id === serviceId && s.tier === tier),
+        );
+        AsyncStorage.setItem("cached_favorites_full", JSON.stringify(updated)); // ← keep cache in sync
+        return updated;
+      });
     } catch (e) {
       // leave it in the list if the request failed
     } finally {
@@ -99,11 +115,7 @@ export default function Favorites() {
       <SafeAreaView style={{ flex: 1 }}>
         {/* HEADER */}
         <View style={styles.header}>
-          
-
           <Text style={styles.title}>Favorites</Text>
-
-          
         </View>
 
         {/* SORT + FILTER */}
@@ -126,7 +138,9 @@ export default function Favorites() {
         )}
 
         {!loading && error && (
-          <Text style={{ textAlign: "center", color: "#e74c3c", marginTop: 20 }}>
+          <Text
+            style={{ textAlign: "center", color: "#e74c3c", marginTop: 20 }}
+          >
             {error}
           </Text>
         )}
@@ -146,7 +160,10 @@ export default function Favorites() {
             {services.map((item) => (
               <View key={`${item.id}_${item.tier}`} style={styles.card}>
                 {item.image_url ? (
-                  <Image source={{ uri: item.image_url }} style={styles.image} />
+                  <Image
+                    source={{ uri: item.image_url }}
+                    style={styles.image}
+                  />
                 ) : (
                   <Image
                     source={require("../../assets/images/service1.png")}
@@ -163,7 +180,9 @@ export default function Favorites() {
                   {item.rating ? (
                     <View style={styles.rating}>
                       <FontAwesome name="star" size={12} color="#FFB300" />
-                      <Text style={styles.small}>{Number(item.rating).toFixed(1)}</Text>
+                      <Text style={styles.small}>
+                        {Number(item.rating).toFixed(1)}
+                      </Text>
                     </View>
                   ) : null}
                 </View>
@@ -195,15 +214,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFF4EC",
   },
-
-  // header: {
-  //   flexDirection: "row",
-  //   justifyContent: "space-between",
-  //   alignItems: "center",
-  //   paddingHorizontal: 15,
-  //   paddingTop: 45,
-  //   paddingBottom: 10,
-  // },
 
   header: {
     flexDirection: "row",
