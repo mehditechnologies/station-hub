@@ -17,7 +17,7 @@ import Bottomnav from "@/components/Bottomnav";
 
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
-import { useUser } from '../../../context/userContext';
+import { useUser } from "../../../context/userContext";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -51,8 +51,6 @@ export default function HomeScreen() {
     fetchStations();
   }, []);
 
-
-
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
@@ -64,7 +62,7 @@ export default function HomeScreen() {
         const data = await res.json();
         if (res.ok) {
           const unread = (data.bookings || []).filter(
-            (b: any) => b.status !== "pending" && !b.customer_read
+            (b: any) => b.status !== "pending" && !b.customer_read,
           );
           setUnreadCount(unread.length);
         }
@@ -76,12 +74,12 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-  const loadCity = async () => {
-    const city = await AsyncStorage.getItem("user_city");
-    if (city) setUserCity(city);
-  };
-  loadCity();
-}, []);
+    const loadCity = async () => {
+      const city = await AsyncStorage.getItem("user_city");
+      if (city) setUserCity(city);
+    };
+    loadCity();
+  }, []);
 
   const sortOptions = [
     { key: "newest", label: "Newest" },
@@ -96,8 +94,12 @@ export default function HomeScreen() {
       list.sort((a, b) =>
         (b.created_at || "").localeCompare(a.created_at || ""),
       );
+    } else if (sortBy === "rated") {
+      list.sort((a, b) => (b.avg_rating || 0) - (a.avg_rating || 0));
+    } else if (sortBy === "popular") {
+      list.sort((a, b) => (b.booking_count || 0) - (a.booking_count || 0));
     }
-    // "rated", "nearest", "popular" — no data yet, list stays in default order for now
+    // "nearest" — no data yet, list stays in default order for now
     return list;
   }, [stations, sortBy]);
   return (
@@ -252,8 +254,20 @@ export default function HomeScreen() {
                     <Text style={styles.serviceLocation}>{locationLabel}</Text>
                   ) : null}
                   <View style={styles.ratingRow}>
-                    <Text style={styles.ratingText}>4.8</Text>
-                    <Text style={styles.ratingStar}>★</Text>
+                    <Text style={styles.ratingText}>
+                      {station.avg_rating > 0
+                        ? station.avg_rating.toFixed(1)
+                        : "New"}
+                    </Text>
+                    {station.avg_rating > 0 && (
+                      <Text style={styles.ratingStar}>★</Text>
+                    )}
+                    {station.rating_count > 0 && (
+                      <Text style={styles.ratingCountText}>
+                        {" "}
+                        ({station.rating_count})
+                      </Text>
+                    )}
                   </View>
                 </View>
 
@@ -441,5 +455,10 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 9,
     fontWeight: "700",
+  },
+
+  ratingCountText: {
+    fontSize: 11,
+    color: "#999",
   },
 });

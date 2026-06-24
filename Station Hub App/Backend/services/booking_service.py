@@ -3,6 +3,13 @@ from config.firebase import db
 from models.booking_model import BookingModel
 from schemas.booking_schemas import BookingRequest
 from utils.email_handler import send_booking_email
+from fastapi import HTTPException
+from config.firebase import db
+from models.booking_model import BookingModel
+from schemas.booking_schemas import BookingRequest
+from utils.email_handler import send_booking_email
+from firebase_admin import firestore   # ← add this line
+
 
 
 async def create_booking(body: BookingRequest, user_id: str) -> dict:
@@ -25,6 +32,11 @@ async def create_booking(body: BookingRequest, user_id: str) -> dict:
 
     doc_ref = db.collection("bookings").add(booking.to_dict())
     booking_id = doc_ref[1].id
+
+    # increment station's booking_count atomically
+    db.collection("stations").document(body.station_id).update({
+        "booking_count": firestore.Increment(1)
+    })
 
     # Send email notification to owner
     try:

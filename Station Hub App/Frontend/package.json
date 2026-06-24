@@ -38,6 +38,7 @@
     "react-native-web": "~0.19.10"
   },
   "devDependencies": {
+    "@types/base-64": "^1.0.2",
     "@types/react": "~18.2.45",
     "eslint": "^8.57.0",
     "eslint-config-expo": "~8.0.0",
