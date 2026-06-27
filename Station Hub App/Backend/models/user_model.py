@@ -9,6 +9,7 @@ class UserModel:
     password: str
     phone: str = ""
     profile_image: str = ""
+    agreed_to_privacy_policy: bool = False
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
 
     def to_dict(self) -> dict:
@@ -18,5 +19,6 @@ class UserModel:
             "password": self.password,
             "phone": self.phone,
             "profile_image": self.profile_image,
+            "agreed_to_privacy_policy": self.agreed_to_privacy_policy,
             "created_at": self.created_at,
         }

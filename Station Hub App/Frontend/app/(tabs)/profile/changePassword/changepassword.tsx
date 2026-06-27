@@ -46,13 +46,13 @@ export default function ChangePasswordScreen() {
     try {
       const token = await AsyncStorage.getItem("token");
       const res = await fetch(`${API_BASE}/auth/change-password`, {
-        method: "PUT",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          current_password: currentPassword,
+          old_password: currentPassword,
           new_password: newPassword,
         }),
       });

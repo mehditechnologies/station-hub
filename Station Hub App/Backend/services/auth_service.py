@@ -211,14 +211,12 @@ async def get_current_user_profile(user_id: str) -> dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     user = user_doc.to_dict()
+    user.pop("password", None)
 
     return {
         "user": {
             "id": user_id,
-            "full_name": user.get("full_name", ""),
-            "email": user.get("email", ""),
-            "phone": user.get("phone", ""),
-            "profile_image": user.get("profile_image", ""),
+            **user,
         }
     }
 
@@ -237,15 +235,15 @@ async def update_current_user_profile(body: UpdateProfileRequest, user_id: str) 
 
     db.collection("users").document(user_id).update(update_data)
 
-    user = user_doc.to_dict()
+    # re-fetch so the response reflects the actual saved document
+    updated_doc = db.collection("users").document(user_id).get()
+    user = updated_doc.to_dict()
+    user.pop("password", None)
 
     return {
         "message": "Profile updated successfully",
         "user": {
             "id": user_id,
-            "full_name": update_data["full_name"],
-            "email": user.get("email", ""),
-            "phone": update_data["phone"],
-            "profile_image": update_data["profile_image"],
+            **user,
         },
     }

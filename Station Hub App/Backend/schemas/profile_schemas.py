@@ -6,3 +6,7 @@ class UpdateProfileRequest(BaseModel):
     phone: Optional[str] = None
     profile_image: Optional[str] = None
     dob: Optional[str] = None
+
+
+class PrivacyAgreementRequest(BaseModel):
+    agreed: bool

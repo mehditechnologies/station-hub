@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status, UploadFile
 from config.firebase import db
-from schemas.profile_schemas import UpdateProfileRequest
+from schemas.profile_schemas import UpdateProfileRequest, PrivacyAgreementRequest
 import base64
 
 
@@ -30,6 +30,17 @@ async def update_profile(body: UpdateProfileRequest, user_id: str) -> dict:
     user_ref.update(update_data)
 
     return {"message": "Profile updated successfully"}
+
+
+async def update_privacy_agreement(agreed: bool, user_id: str) -> dict:
+    user_ref = db.collection("users").document(user_id)
+
+    if not user_ref.get().exists:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_ref.update({"agreed_to_privacy_policy": agreed})
+
+    return {"agreed_to_privacy_policy": agreed, "message": "Privacy agreement updated successfully"}
 
 
 async def delete_account(user_id: str) -> dict:

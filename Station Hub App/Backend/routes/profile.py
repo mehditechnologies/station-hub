@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, UploadFile, File
 from middleware.auth_middleware import get_current_user
-from schemas.profile_schemas import UpdateProfileRequest
+from schemas.profile_schemas import UpdateProfileRequest, PrivacyAgreementRequest
 import services.profile_service as profile_service
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
@@ -14,6 +14,10 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
 @router.put("/")
 async def update_profile(body: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
     return await profile_service.update_profile(body, current_user["sub"])
+
+@router.put("/privacy-agreement")
+async def update_privacy_agreement(body: PrivacyAgreementRequest, current_user: dict = Depends(get_current_user)):
+    return await profile_service.update_privacy_agreement(body.agreed, current_user["sub"])
 
 
 @router.delete("/")

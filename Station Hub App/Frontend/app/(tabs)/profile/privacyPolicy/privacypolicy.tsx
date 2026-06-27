@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,31 +7,72 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import Bottomnav from "@/components/Bottomnav";
+import { useUser } from "../../../../context/userContext"; // adjust relative path to match this file's depth
+import { API_BASE } from "../../../../src/config"; // adjust relative path to match this file's depth
 
 export default function PrivacyPolicyScreen() {
   const router = useRouter();
+  const { user, loading: userLoading, updateUser } = useUser();
 
   const [checked, setChecked] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // reflect the user's saved agreement status whenever it loads/changes
+  useEffect(() => {
+    if (user) {
+      setAgreed(!!user.agreed_to_privacy_policy);
+      setChecked(!!user.agreed_to_privacy_policy);
+    }
+  }, [user]);
 
   const handleAgree = async () => {
     if (!checked) {
       Alert.alert("Please confirm", "You must check the box to agree to the Privacy Policy.");
       return;
     }
-    setAgreed(true);
+
+    setSaving(true);
     try {
-      await AsyncStorage.setItem("privacy_policy_agreed", "true");
+      const token = await AsyncStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/profile/privacy-agreement`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ agreed: true }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setAgreed(true);
+        updateUser({ ...user, agreed_to_privacy_policy: true });
+      } else {
+        Alert.alert("Error", data.detail || "Failed to save your agreement.");
+      }
     } catch (e) {
-      // non-blocking — local agreement flag failed to persist
+      Alert.alert("Error", "Cannot connect to server.");
+    } finally {
+      setSaving(false);
     }
   };
+
+  if (userLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator color="#FF7A45" size="large" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -122,9 +163,11 @@ export default function PrivacyPolicyScreen() {
               agreed && styles.agreedBtn,
             ]}
             onPress={handleAgree}
-            disabled={agreed}
+            disabled={agreed || saving}
           >
-            {agreed ? (
+            {saving ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : agreed ? (
               <View style={styles.agreedRow}>
                 <Ionicons name="checkmark-circle" size={18} color="#fff" />
                 <Text style={styles.agreeText}>Agreed</Text>

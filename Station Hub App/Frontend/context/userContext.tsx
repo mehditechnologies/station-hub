@@ -6,8 +6,10 @@ type UserProfile = {
   id: string;
   full_name: string;
   email: string;
-  phone: string;
-  profile_image: string;
+  phone?: string;
+  profile_image?: string;
+  agreed_to_privacy_policy?: boolean;
+  // ...other fields
 };
 
 type UserContextType = {
