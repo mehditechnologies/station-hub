@@ -14,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+import { API_BASE } from "../../../../src/config"; // adjust relative path as needed
 
 const TAB_STATUS_MAP: Record<string, string[]> = {
   upcoming: ["pending", "confirmed"],
@@ -212,7 +212,7 @@ export default function BookingHistoryScreen() {
                   />
                 ) : (
                   <Image
-                    source={require("../../../assets/images/booking.png")}
+                    source={require("../../../../assets/images/booking.png")}
                     style={styles.cardImage}
                   />
                 )}

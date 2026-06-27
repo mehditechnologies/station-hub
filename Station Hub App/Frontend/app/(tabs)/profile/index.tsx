@@ -31,24 +31,45 @@ export default function ProfileSettingsScreen() {
   title: "Manage your profile",
   subtitle: "Change profile picture, name, number & mail",
   icon: <Feather name="user" size={20} color="#FF7A45" />,
-  route: "/(tabs)/profile/manageprofile",
+  route: "/(tabs)/profile/manageProfile/manageprofile",
 },
     {
       id: 2,
       title: "Booking History",
       subtitle: "View past bookings",
       icon: <Feather name="clock" size={20} color="#FF7A45" />,
-      route: "/(tabs)/profile/bookinghistory",
+      route: "/(tabs)/profile/bookingHistory/bookinghistory",
+    },
+    {
+      id: 3,
+      title: "Change Password",
+      subtitle: "Update your account password",
+      icon: <Feather name="lock" size={20} color="#FF7A45" />,
+      route: "/(tabs)/profile/changePassword/changepassword",
     },
   ];
 
   const settingsItems = [
     {
       id: 1,
-      title: "Settings",
-      subtitle: "App preferences",
-      icon: <Feather name="settings" size={20} color="#FF7A45" />,
-      route: "/(tabs)/profile/profilesetting",
+      title: "Privacy Policy",
+      subtitle: "How we handle your data",
+      icon: <Feather name="shield" size={20} color="#FF7A45" />,
+      route: "/(tabs)/profile/privacyPolicy/privacypolicy",
+    },
+    {
+      id: 2,
+      title: "FAQs",
+      subtitle: "Frequently asked questions",
+      icon: <Feather name="help-circle" size={20} color="#FF7A45" />,
+      route: "/(tabs)/profile/faqs/faqs",
+    },
+    {
+      id: 3,
+      title: "About App",
+      subtitle: "App version & information",
+      icon: <Feather name="info" size={20} color="#FF7A45" />,
+      route: "/(tabs)/profile/aboutApp/aboutapp",
     },
   ];
 
@@ -138,15 +159,15 @@ export default function ProfileSettingsScreen() {
         {generalItems.map(renderItem)}
 
         {/* SETTINGS */}
-        {/* <Text style={styles.sectionTitle}>
+        <Text style={styles.sectionTitle}>
           Settings
         </Text>
-        {settingsItems.map(renderItem)} */}
+        {settingsItems.map(renderItem)}
 
         {/* LOGOUT */}
         <TouchableOpacity
                     style={[styles.menuItem, styles.logoutItem]}
-                    onPress={() => router.push("/(tabs)/profile/logout")}
+                    onPress={() => router.push("/(tabs)/profile/logout/logout")}
                   >
                     <Ionicons name="log-out-outline" size={20} color="#FF0000" />
                     <View style={styles.menuText}>
