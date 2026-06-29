@@ -69,9 +69,9 @@ export default function ChooseLocationScreen() {
       {/* MAP */}
       <MapView
         style={styles.map}
-        region={region} // ← controlled region
-        showsUserLocation // ← shows blue dot
-        showsMyLocationButton // ← shows the GPS button
+        region={region}
+        showsUserLocation
+        showsMyLocationButton
       />
 
       {/* LOCATION BUTTON */}

@@ -18,7 +18,9 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "package": "com.laibafaryal.stationhubapp"
+      "package": "com.laibafaryal.stationhubapp",
+      "useNextNotificationsApi": true,
+      "googleMapsApiKey": "AIzaSyAcB4ZiikeItNwanal_N0T3eeJTniHzV8s"
     },
     "web": {
       "output": "static",
@@ -38,14 +40,25 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#FF7A45"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "router": {}
-      
-    }
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "522bedc3-8641-4434-8e7f-2e0551bb2a4d"
+      }
+    },
+    "owner": "sadeed7"
   }
 }
