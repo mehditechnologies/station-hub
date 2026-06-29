@@ -1,8 +1,14 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { UserProvider } from "../../context/userContext";
+import { useEffect } from "react";
+import { registerPushToken } from "../../src/notifications";
+
 
 export default function TabLayout() {
+  useEffect(() => {
+    registerPushToken();
+  }, []);
   return (
     <UserProvider>
       <Tabs

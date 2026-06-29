@@ -35,7 +35,7 @@ export default function ProfileSettingsScreen() {
 },
     {
       id: 2,
-      title: "Booking History",
+      title: "Bookings",
       subtitle: "View past bookings",
       icon: <Feather name="clock" size={20} color="#FF7A45" />,
       route: "/(tabs)/profile/bookingHistory/bookinghistory",
@@ -126,9 +126,9 @@ export default function ProfileSettingsScreen() {
             />
           </TouchableOpacity> */}
 
-          <Text style={styles.headerTitle}>
+          {/* <Text style={styles.headerTitle}>
             Profile Settings
-          </Text>
+          </Text> */}
 
           <View style={{ width: 24 }} />
         </View>
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginVertical: 28,
+    marginVertical: 20,
   },
 
   headerTitle: {

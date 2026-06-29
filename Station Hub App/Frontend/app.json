@@ -20,7 +20,7 @@
       },
       "package": "com.laibafaryal.stationhubapp",
       "useNextNotificationsApi": true,
-      "googleMapsApiKey": "AIzaSyAcB4ZiikeItNwanal_N0T3eeJTniHzV8s"
+      "googleMapsApiKey": ""
     },
     "web": {
       "output": "static",

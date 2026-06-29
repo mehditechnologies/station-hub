@@ -79,3 +79,10 @@ async def upload_avatar(file: UploadFile, user_id: str) -> dict:
     user_ref.update({"profile_image": avatar_url})
 
     return {"avatar_url": avatar_url, "message": "Avatar uploaded successfully"}
+
+async def update_push_token(push_token: str, user_id: str) -> dict:
+    user_ref = db.collection("users").document(user_id)
+    if not user_ref.get().exists:
+        raise HTTPException(status_code=404, detail="User not found")
+    user_ref.update({"push_token": push_token})
+    return {"message": "Push token saved"}

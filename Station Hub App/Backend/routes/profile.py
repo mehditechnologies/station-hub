@@ -28,3 +28,8 @@ async def delete_account(current_user: dict = Depends(get_current_user)):
 @router.post("/upload-avatar")
 async def upload_avatar(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     return await profile_service.upload_avatar(file, current_user["sub"])
+
+@router.put("/push-token")
+async def update_push_token(body: dict, current_user: dict = Depends(get_current_user)):
+    return await profile_service.update_push_token(body.get("push_token"), current_user["sub"])
+

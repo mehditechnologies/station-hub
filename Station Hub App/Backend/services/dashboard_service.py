@@ -83,6 +83,37 @@ async def update_booking_status(booking_id: str, status: str) -> dict:
         raise HTTPException(status_code=404, detail="Booking not found")
 
     doc_ref.update({"status": status})
+
+    # Send push notification to customer
+    try:
+        booking = doc.to_dict()
+        user_id = booking.get("user_id")
+        if user_id:
+            user_doc = db.collection("users").document(user_id).get()
+            if user_doc.exists:
+                push_token = user_doc.to_dict().get("push_token")
+                if push_token:
+                    title_map = {
+                        "confirmed": "Booking Confirmed ✅",
+                        "rejected":  "Booking Rejected ❌",
+                        "completed": "Service Completed 🎉",
+                        "cancelled": "Booking Cancelled",
+                    }
+                    service_name = booking.get("service_name") or "Your service"
+                    import httpx
+                    async with httpx.AsyncClient() as client:
+                        await client.post(
+                            "https://exp.host/--/api/v2/push/send",
+                            json={
+                                "to": push_token,
+                                "title": title_map.get(status, "Booking Update"),
+                                "body": f"{service_name} has been {status}.",
+                                "sound": "default",
+                            }
+                        )
+    except Exception as e:
+        print(f"Push notification error: {e}")
+
     return {"message": f"Booking marked as {status}", "booking_id": booking_id}
 
 

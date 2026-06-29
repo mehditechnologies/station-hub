@@ -122,7 +122,9 @@ export default function HomeScreen() {
               <View style={styles.location}>
                 <Ionicons name="location-sharp" size={15} color="#FF7A45" />
 
-                <Text style={styles.locationText}>{userCity}</Text>
+                <Text style={styles.locationText}>
+                  {userCity}
+                </Text>
               </View>
             </View>
           </View>
@@ -325,6 +327,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "gray",
     marginLeft: 4,
+    maxWidth: 160,
   },
 
   iconSection: {

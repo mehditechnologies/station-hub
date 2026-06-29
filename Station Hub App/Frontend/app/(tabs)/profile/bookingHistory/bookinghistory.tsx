@@ -127,7 +127,7 @@ export default function BookingHistoryScreen() {
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Booking History</Text>
+        <Text style={styles.title}>Bookings</Text>
 
         {/* <Image
           source={require("../../../assets/images/johndoe.png")}
