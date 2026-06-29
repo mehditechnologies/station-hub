@@ -48,10 +48,18 @@ export default function ChooseLocationScreen() {
         longitudeDelta: 0.01,
       });
 
+      
       // reverse geocode
       const [place] = await Location.reverseGeocodeAsync(coords);
-      const city = place?.city || place?.district || place?.region || "Unknown";
-      setCityName(city);
+      const parts = [
+        place?.name,
+        place?.street,
+        place?.district,
+        place?.subregion,
+        place?.city,
+      ].filter(Boolean);
+      const fullAddress = parts.join(", ") || "Unknown";
+      setCityName(fullAddress);
     } catch (error) {
       alert("Could not get location");
     }
